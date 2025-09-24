@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import HeaderAfterAuth from '../components/HeaderAfterAuth';
+import { VITE_BACKEND_URL } from "../config/config";
 
 interface AnnouncementData {
   title: string;
@@ -64,7 +65,7 @@ const CreateAnnouncement: React.FC = () => {
 
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/v1/announcements', {
+      const response = await fetch(`${VITE_BACKEND_URL}/api/v1/announcements`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
