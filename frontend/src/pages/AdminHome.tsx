@@ -116,7 +116,7 @@ const AdminHome = () => {
   const priorities = ["Low", "Medium", "High", "Critical"];
 
   // Auto-routing logic based on issue type and severity
-  const getAutoDepartment = (issueType: string, severityScore?: number, location?: string) => {
+  const getAutoDepartment = (issueType: string, severityScore?: number) => {
     const routingMap: { [key: string]: string } = {
       "Road Infrastructure": "Public Works",
       "Waste Management": "Sanitation",
@@ -184,7 +184,7 @@ const AdminHome = () => {
           const enhancedIssues = data.issues.map(
             (issue: Issues, index: number) => {
               // Auto-route new issues
-              const autoDepartment = getAutoDepartment(issue.type, issue.severityScore, issue.location?.address);
+              const autoDepartment = getAutoDepartment(issue.type, issue.severityScore);
               const routingReason = getRoutingReason(issue.type, issue.severityScore);
               
               // Create initial status timeline

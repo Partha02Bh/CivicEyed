@@ -172,7 +172,7 @@ const LiveMap = () => {
     averageSeverity: 0,
   });
   const [mapCenter, setMapCenter] = useState<[number, number]>([28.6139, 77.2090]); // Default to Delhi
-  const intervalRef = useRef<number>();
+  const intervalRef = useRef<number | null>(null);
 
   const categories = [
     "Road Infrastructure",
