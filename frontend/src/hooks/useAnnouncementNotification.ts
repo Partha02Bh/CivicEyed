@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { VITE_BACKEND_URL } from "../config/config";
 
 interface AnnouncementNotification {
   hasNewAnnouncements: boolean;
@@ -17,7 +18,7 @@ export const useAnnouncementNotification = (): AnnouncementNotification => {
         const lastViewedDate = lastViewed ? new Date(lastViewed) : new Date(0);
 
         // Fetch recent announcements
-        const response = await fetch('/api/v1/announcements?limit=5');
+        const response = await fetch(`${VITE_BACKEND_URL}/api/v1/announcements?limit=5`);
         const data = await response.json();
 
         if (data.success && data.data.length > 0) {

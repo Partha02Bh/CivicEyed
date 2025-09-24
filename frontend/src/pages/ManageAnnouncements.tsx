@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Badge } from '../components/ui/badge';
+import { VITE_BACKEND_URL } from "../config/config";
 import { 
   Megaphone, 
   Search, 
@@ -93,7 +94,7 @@ const ManageAnnouncements: React.FC = () => {
       if (selectedPriority !== 'All') params.append('priority', selectedPriority);
       if (pincodeFilter) params.append('pincode', pincodeFilter);
 
-      const response = await fetch(`/api/v1/announcements?${params}`, {
+      const response = await fetch(`${VITE_BACKEND_URL}/api/v1/announcements?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -124,7 +125,7 @@ const ManageAnnouncements: React.FC = () => {
 
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`/api/v1/announcements/${id}`, {
+      const response = await fetch(`${VITE_BACKEND_URL}/api/v1/announcements/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
