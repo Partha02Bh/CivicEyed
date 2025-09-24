@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { upload } from "../middlerware/upload.middleware";
-import { createIssue, getIssues } from "../controllers/issues.controllers";
+import { createIssue, getIssues, hypeIssue } from "../controllers/issues.controllers";
 import { authMiddleware } from "../middlerware/auth.middleware";
 
 const router = Router();
@@ -27,5 +27,8 @@ router.post(
 );
 
 router.get("/all-issues", authMiddleware, getIssues);
+
+// Hype an issue (upvote-like)
+router.post("/issues/:id/hype", authMiddleware, hypeIssue);
 
 export default router;

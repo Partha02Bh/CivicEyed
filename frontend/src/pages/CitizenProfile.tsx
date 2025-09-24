@@ -1,4 +1,74 @@
 import { useEffect, useState } from "react";
+
+// Add CSS for animations
+const styles = `
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-fade-in {
+    animation: fade-in 0.6s ease-out forwards;
+  }
+  
+  @keyframes slide-in-left {
+    from {
+      opacity: 0;
+      transform: translateX(-30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  .animate-slide-in-left {
+    animation: slide-in-left 0.5s ease-out forwards;
+  }
+  
+  @keyframes slide-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  .animate-slide-in-right {
+    animation: slide-in-right 0.5s ease-out forwards;
+  }
+  
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  .animate-scale-in {
+    animation: scale-in 0.4s ease-out forwards;
+  }
+`;
+
+// Inject styles into the document
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
 import {
   Card,
   CardContent,
@@ -12,6 +82,7 @@ import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Separator } from "../components/ui/separator";
+import Chatbot from "../components/Chatbot";
 import {
   User,
   Mail,
@@ -34,6 +105,7 @@ import {
 } from "lucide-react";
 import HeaderAfterAuth from "../components/HeaderAfterAuth";
 import { useAuth } from "../contexts/AuthContext";
+import { useLanguage } from "../contexts/LanguageContext";
 import { toast } from "sonner";
 import { VITE_BACKEND_URL } from "../config/config";
 
@@ -56,6 +128,16 @@ type ViewMode = 'grid' | 'list';
 type FilterStatus = 'all' | 'Pending' | 'In Progress' | 'Resolved' | 'Rejected';
 
 const CitizenProfile = () => {
+  // Safely use language context with fallback
+  let t: (key: string) => string;
+  try {
+    const languageContext = useLanguage();
+    t = languageContext.t;
+  } catch (error) {
+    console.warn('Language context not available, using fallback');
+    t = (key: string) => key; // Fallback function that returns the key itself
+  }
+
   const { user, updateUserProfile, token, isLoading } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   
@@ -69,10 +151,21 @@ const CitizenProfile = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const [profile, setProfile] = useState({
-    fullName: user?.fullName || "",
-    email: user?.email || "",
-    phonenumber: user?.phonenumber || "",
+    fullName: "",
+    email: "",
+    phonenumber: "",
   });
+
+  // Update profile when user data is available
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        fullName: user.fullName || "",
+        email: user.email || "",
+        phonenumber: user.phonenumber || "",
+      });
+    }
+  }, [user]);
 
   // Filter and search logic
   useEffect(() => {
@@ -98,16 +191,34 @@ const CitizenProfile = () => {
   // Show loading state until AuthContext is ready
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-white via-green-50 to-white">
+      <div className="min-h-screen bg-gradient-to-br from-white via-green-50 to-emerald-50">
         <div className="flex items-center justify-center h-screen">
-          <div className="text-center space-y-6">
+          <div className="text-center space-y-8">
+            {/* Enhanced Loading Animation */}
             <div className="relative">
-              <div className="w-16 h-16 border-4 border-green-200 rounded-full animate-spin"></div>
-              <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin absolute top-0"></div>
+              <div className="w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-16 h-16 border-4 border-green-200 rounded-full animate-spin"></div>
+                <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin absolute"></div>
+              </div>
+              <div className="absolute -inset-4 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full blur-xl opacity-30 animate-pulse"></div>
             </div>
-            <div className="space-y-2">
-              <p className="text-green-800 text-xl font-semibold">Loading Profile</p>
-              <p className="text-green-600">Please wait while we fetch your data...</p>
+            
+            {/* Loading Text with Animation */}
+            <div className="space-y-4">
+              <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-green-50 to-emerald-50 px-8 py-4 rounded-full border border-green-200 shadow-lg">
+                <div className="w-3 h-3 bg-green-600 rounded-full animate-pulse"></div>
+                <h2 className="text-green-800 text-2xl font-bold">Loading Profile</h2>
+              </div>
+              <p className="text-gray-600 text-lg max-w-md mx-auto leading-relaxed">
+                Please wait while we securely fetch your profile data...
+              </p>
+              
+ {/* Animated Dots */}
+              <div className="flex justify-center space-x-2 mt-6">
+                <div className="w-3 h-3 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-3 h-3 bg-green-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              </div>
             </div>
           </div>
         </div>
@@ -117,16 +228,34 @@ const CitizenProfile = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-white via-green-50 to-white">
+      <div className="min-h-screen bg-gradient-to-br from-white via-green-50 to-emerald-50">
         <div className="flex items-center justify-center h-screen">
-          <div className="text-center space-y-6">
+          <div className="text-center space-y-8">
+            {/* Enhanced Loading Animation */}
             <div className="relative">
-              <div className="w-16 h-16 border-4 border-green-200 rounded-full animate-spin"></div>
-              <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin absolute top-0"></div>
+              <div className="w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-16 h-16 border-4 border-green-200 rounded-full animate-spin"></div>
+                <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin absolute"></div>
+              </div>
+              <div className="absolute -inset-4 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full blur-xl opacity-30 animate-pulse"></div>
             </div>
-            <div className="space-y-2">
-              <p className="text-green-800 text-xl font-semibold">Loading Profile</p>
-              <p className="text-green-600">Please wait while we fetch your data...</p>
+            
+            {/* Loading Text with Animation */}
+            <div className="space-y-4">
+              <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-green-50 to-emerald-50 px-8 py-4 rounded-full border border-green-200 shadow-lg">
+                <div className="w-3 h-3 bg-green-600 rounded-full animate-pulse"></div>
+                <h2 className="text-green-800 text-2xl font-bold">Loading Profile</h2>
+              </div>
+              <p className="text-gray-600 text-lg max-w-md mx-auto leading-relaxed">
+                Please wait while we securely fetch your profile data...
+              </p>
+              
+              {/* Animated Dots */}
+              <div className="flex justify-center space-x-2 mt-6">
+                <div className="w-3 h-3 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-3 h-3 bg-green-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              </div>
             </div>
           </div>
         </div>
@@ -267,40 +396,48 @@ const CitizenProfile = () => {
   const renderIssueCard = (issue: Issues, index: number) => {
     if (viewMode === 'grid') {
       return (
-        <Card key={issue._id} className="group bg-white border border-gray-200 shadow-sm hover:shadow-lg rounded-lg overflow-hidden transition-all duration-300 hover:-translate-y-1">
+        <Card key={issue._id} className="group bg-white border-0 shadow-lg hover:shadow-2xl rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-2 backdrop-blur-sm">
           <div className="relative">
             {issue.file ? (
-              <div className="relative h-48 overflow-hidden">
+              <div className="relative h-56 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
                 {imageLoadingStates[issue._id] && (
-                  <div className="absolute inset-0 bg-green-50 animate-pulse z-10 flex items-center justify-center">
-                    <div className="w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 animate-pulse z-10 flex items-center justify-center">
+                    <div className="w-10 h-10 border-3 border-green-600 border-t-transparent rounded-full animate-spin"></div>
                   </div>
                 )}
                 <img
                   src={getOptimizedImageUrl(issue.file)}
                   alt={`Attachment for ${issue.title}`}
-                  className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500 cursor-pointer"
+                  className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-700 cursor-pointer"
                   onLoadStart={() => handleImageLoadStart(issue._id)}
                   onLoad={() => handleImageLoad(issue._id)}
                   onError={(e) => handleImageError(e, issue._id)}
                   loading="lazy"
                   onClick={() => openImageInNewTab(issue.file!)}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <Button size="sm" variant="secondary" className="bg-white/90 hover:bg-white shadow-sm border-0">
-                    <Eye className="h-4 w-4" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-x-2 group-hover:translate-x-0">
+                  <Button size="sm" variant="secondary" className="bg-white/95 hover:bg-white shadow-xl border-0 backdrop-blur-sm rounded-xl px-4 py-2">
+                    <Eye className="h-4 w-4 mr-1" />
+                    View
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="h-48 bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
-                <FileText className="h-12 w-12 text-green-400" />
+              <div className="h-56 bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-white/5"></div>
+                <div className="relative z-10">
+                  <div className="p-4 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg">
+                    <FileText className="h-12 w-12 text-green-500" />
+                  </div>
+                </div>
+                <div className="absolute top-2 right-2 w-16 h-16 bg-green-200/20 rounded-full"></div>
+                <div className="absolute bottom-2 left-2 w-12 h-12 bg-green-200/20 rounded-full"></div>
               </div>
             )}
-            <div className="absolute top-3 left-3">
-              <Badge className={`${getStatusColor(issue.status)} font-medium px-2.5 py-1 rounded-md`}>
-                <span className="flex items-center gap-1.5 text-xs">
+            <div className="absolute top-4 left-4 z-10">
+              <Badge className={`${getStatusColor(issue.status)} font-bold px-4 py-2 rounded-xl shadow-lg backdrop-blur-sm border-0`}>
+                <span className="flex items-center gap-2 text-sm">
                   {getStatusIcon(issue.status)}
                   {issue.status}
                 </span>
@@ -308,12 +445,12 @@ const CitizenProfile = () => {
             </div>
           </div>
           
-          <CardContent className="p-5 space-y-4">
+          <CardContent className="p-6 space-y-4">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-green-700 transition-colors duration-200">
+              <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-green-700 transition-colors duration-300 leading-tight">
                 {issue.title}
               </h3>
-              <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">
+              <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed text-gray-700">
                 {issue.description}
               </p>
             </div>
@@ -321,16 +458,20 @@ const CitizenProfile = () => {
             <Separator className="bg-gray-200" />
             
             <div className="space-y-3 text-sm">
-              <div className="flex items-center space-x-2 text-gray-600">
-                <MapPin className="h-4 w-4 text-green-600 flex-shrink-0" />
-                <span className="line-clamp-1">{issue.location.address}</span>
+              <div className="flex items-center space-x-3 text-gray-700">
+                <div className="p-2 bg-green-50 rounded-lg">
+                  <MapPin className="h-4 w-4 text-green-600" />
+                </div>
+                <span className="line-clamp-1 font-medium">{issue.location.address}</span>
               </div>
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 text-gray-600">
-                  <Calendar className="h-4 w-4 text-green-600" />
-                  <span>{new Date(issue.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                <div className="flex items-center space-x-3 text-gray-700">
+                  <div className="p-2 bg-green-50 rounded-lg">
+                    <Calendar className="h-4 w-4 text-green-600" />
+                  </div>
+                  <span className="font-medium">{new Date(issue.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                 </div>
-                <Badge variant="outline" className="text-xs bg-green-50 border-green-200 text-green-700">
+                <Badge variant="outline" className="text-xs bg-green-50 border-green-200 text-green-700 font-bold px-3 py-1 rounded-lg">
                   {issue.issueType}
                 </Badge>
               </div>
@@ -340,18 +481,18 @@ const CitizenProfile = () => {
       );
     } else {
       return (
-        <Card key={issue._id} className="bg-white border border-gray-200 shadow-sm hover:shadow-md rounded-lg overflow-hidden transition-all duration-200">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1 space-y-2">
-                <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-green-600 rounded-full flex-shrink-0"></div>
-                  <h3 className="text-xl font-semibold text-gray-900">{issue.title}</h3>
+        <Card key={issue._id} className="bg-white border-0 shadow-lg hover:shadow-2xl rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-1 backdrop-blur-sm">
+          <CardContent className="p-8">
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center space-x-4">
+                  <div className="w-3 h-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex-shrink-0 shadow-lg"></div>
+                  <h3 className="text-2xl font-bold text-gray-900 leading-tight group-hover:text-green-700 transition-colors duration-300">{issue.title}</h3>
                 </div>
-                <p className="text-gray-700 leading-relaxed pl-5">{issue.description}</p>
+                <p className="text-gray-700 leading-relaxed pl-7 text-lg">{issue.description}</p>
               </div>
-              <Badge className={`${getStatusColor(issue.status)} font-medium px-3 py-1.5 rounded-md ml-4 flex-shrink-0`}>
-                <span className="flex items-center gap-1.5 text-sm">
+              <Badge className={`${getStatusColor(issue.status)} font-bold px-4 py-2 rounded-xl shadow-lg backdrop-blur-sm border-0 ml-6 flex-shrink-0`}>
+                <span className="flex items-center gap-2 text-sm">
                   {getStatusIcon(issue.status)}
                   {issue.status}
                 </span>
@@ -359,57 +500,57 @@ const CitizenProfile = () => {
             </div>
 
             {issue.file && (
-              <div className="mb-6 pl-5">
-                <div className="relative group max-w-md">
+              <div className="mb-8 pl-7">
+                <div className="relative group max-w-2xl">
                   {imageLoadingStates[issue._id] && (
-                    <div className="absolute inset-0 bg-green-50 animate-pulse rounded-lg flex items-center justify-center z-10">
-                      <div className="w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 animate-pulse rounded-2xl flex items-center justify-center z-10">
+                      <div className="w-10 h-10 border-3 border-green-600 border-t-transparent rounded-full animate-spin"></div>
                     </div>
                   )}
                   <img
                     src={getOptimizedImageUrl(issue.file)}
                     alt={`Attachment for ${issue.title}`}
-                    className="w-full max-w-md h-48 object-cover rounded-lg border border-gray-200 shadow-sm group-hover:shadow-md transition-all duration-300 cursor-pointer"
+                    className="w-full max-w-2xl h-64 object-cover rounded-2xl border-2 border-gray-100 shadow-lg group-hover:shadow-2xl transition-all duration-500 cursor-pointer"
                     onLoadStart={() => handleImageLoadStart(issue._id)}
                     onLoad={() => handleImageLoad(issue._id)}
                     onError={(e) => handleImageError(e, issue._id)}
                     loading="lazy"
                     onClick={() => openImageInNewTab(issue.file!)}
                   />
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-lg transition-all duration-300 flex items-center justify-center cursor-pointer"
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-2xl transition-all duration-500 flex items-center justify-center cursor-pointer"
                        onClick={() => openImageInNewTab(issue.file!)}>
-                    <div className="transform scale-0 group-hover:scale-100 transition-transform duration-200 bg-white rounded-lg p-3 shadow-md">
-                      <Eye className="h-5 w-5 text-gray-700" />
+                    <div className="transform scale-0 group-hover:scale-100 transition-transform duration-300 bg-white/95 backdrop-blur-sm rounded-2xl p-4 shadow-2xl">
+                      <Eye className="h-6 w-6 text-gray-700" />
                     </div>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-2 italic flex items-center">
-                  <Eye className="h-3 w-3 mr-1" />
-                  Click to view full size
+                <p className="text-sm text-gray-500 mt-3 italic flex items-center pl-2">
+                  <Eye className="h-4 w-4 mr-2" />
+                  Click image to view full size
                 </p>
               </div>
             )}
 
-            <Separator className="my-4 bg-gray-200" />
+            <Separator className="my-6 bg-gray-200" />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm pl-5">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-50 rounded-lg">
-                  <MapPin className="h-4 w-4 text-green-600" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-lg pl-7">
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-200 shadow-md">
+                  <MapPin className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900 mb-1">Location</p>
-                  <p className="text-gray-600">{issue.location.address}</p>
+                  <p className="font-bold text-gray-900 mb-1 text-sm uppercase tracking-wider">Location</p>
+                  <p className="text-gray-700 font-medium">{issue.location.address}</p>
                 </div>
               </div>
               
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-50 rounded-lg">
-                  <Calendar className="h-4 w-4 text-green-600" />
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-200 shadow-md">
+                  <Calendar className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900 mb-1">Reported On</p>
-                  <p className="text-gray-600">
+                  <p className="font-bold text-gray-900 mb-1 text-sm uppercase tracking-wider">Reported On</p>
+                  <p className="text-gray-700 font-medium">
                     {new Date(issue.createdAt).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'long',
@@ -419,13 +560,13 @@ const CitizenProfile = () => {
                 </div>
               </div>
               
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-50 rounded-lg">
-                  <FileText className="h-4 w-4 text-green-600" />
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-200 shadow-md">
+                  <FileText className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900 mb-1">Issue Type</p>
-                  <p className="text-gray-600">{issue.issueType}</p>
+                  <p className="font-bold text-gray-900 mb-1 text-sm uppercase tracking-wider">Issue Type</p>
+                  <p className="text-gray-700 font-medium">{issue.issueType}</p>
                 </div>
               </div>
             </div>
@@ -441,39 +582,48 @@ const CitizenProfile = () => {
       <HeaderAfterAuth />
 
       <div className="pt-24 container mx-auto my-8 max-w-7xl space-y-8 px-4">
+        {/* Animated Content Container */}
+        <div className="space-y-8 animate-fade-in">
         {/* Profile Header */}
-        <Card className="bg-white border border-gray-200 shadow-lg rounded-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-green-100 to-green-50 h-24"></div>
-          <CardHeader className="relative pb-6">
+        <Card className="bg-white border-0 shadow-xl rounded-2xl overflow-hidden backdrop-blur-sm bg-white/95 animate-slide-in-left" style={{ animationDelay: '0.1s' }}>
+          <div className="bg-gradient-to-r from-green-600 via-green-500 to-emerald-600 h-32 relative overflow-hidden">
+            <div className="absolute inset-0 bg-black/10"></div>
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full -ml-24 -mb-24"></div>
+          </div>
+          <CardHeader className="relative pb-8">
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between space-y-6 lg:space-y-0">
               <div className="flex items-center space-x-6">
-                <Avatar className="h-24 w-24 border-4 border-white shadow-md -mt-12 bg-green-50">
-                  <AvatarImage src="/placeholder.svg" />
-                  <AvatarFallback className="text-2xl font-semibold text-green-700 bg-green-100">
-                    {profile.fullName
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="space-y-2">
-                  <CardTitle className="text-3xl font-bold text-gray-900">
+                <div className="relative">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full blur-sm opacity-75 animate-pulse"></div>
+                  <Avatar className="h-28 w-28 border-4 border-white shadow-2xl -mt-16 bg-gradient-to-br from-green-50 to-emerald-50 relative z-10">
+                    <AvatarImage src="/placeholder.svg" />
+                    <AvatarFallback className="text-3xl font-bold text-green-800 bg-gradient-to-br from-green-100 to-emerald-100">
+                      {profile.fullName
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+                <div className="space-y-3">
+                  <CardTitle className="text-3xl font-bold text-gray-900 tracking-tight">
                     {profile.fullName}
                   </CardTitle>
-                  <CardDescription className="text-lg text-gray-600 flex items-center gap-2">
+                  <CardDescription className="text-lg text-gray-600 flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full border border-green-200 inline-flex">
                     <Building className="w-5 h-5 text-green-600" />
-                    Citizen Profile Dashboard
+                    <span className="font-medium text-green-800">Citizen Profile Dashboard</span>
                   </CardDescription>
                 </div>
               </div>
               <Button
                 variant={isEditing ? "default" : "outline"}
                 size="lg"
-                className={`${
-                  isEditing
-                    ? "bg-green-700 hover:bg-green-800 text-white shadow-md"
-                    : "border-green-700 text-green-700 hover:bg-green-50"
-                } transition-all duration-200 font-medium px-6`}
+                className={`
+                  ${isEditing
+                    ? "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105"
+                    : "border-2 border-green-600 text-green-700 hover:bg-green-50 hover:border-green-700 hover:shadow-md transform hover:scale-105"
+                  } transition-all duration-300 font-semibold px-8 py-3 rounded-xl backdrop-blur-sm`}
                 onClick={
                   isEditing ? handleSaveProfile : () => setIsEditing(true)
                 }
@@ -483,15 +633,16 @@ const CitizenProfile = () => {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="px-8 pb-8">
+          <CardContent className="px-10 pb-10">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-              <div className="space-y-3">
-                <Label htmlFor="name" className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              <div className="space-y-4">
+                <Label htmlFor="name" className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                  <div className="w-1 h-4 bg-green-600 rounded-full"></div>
                   Full Name
                 </Label>
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-green-50 rounded-lg">
-                    <User className="h-5 w-5 text-green-700" />
+                <div className="flex items-center space-x-4">
+                  <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200 shadow-sm">
+                    <User className="h-6 w-6 text-green-700" />
                   </div>
                   {isEditing ? (
                     <Input
@@ -500,21 +651,24 @@ const CitizenProfile = () => {
                       onChange={(e) =>
                         setProfile({ ...profile, fullName: e.target.value })
                       }
-                      className="border-gray-300 focus:border-green-600 focus:ring-green-200 text-lg"
+                      className="border-2 border-gray-200 focus:border-green-500 focus:ring-green-200 text-lg px-4 py-3 rounded-xl shadow-sm focus:shadow-md transition-all duration-200"
                     />
                   ) : (
-                    <span className="text-lg font-medium text-gray-800">{profile.fullName}</span>
+                    <div className="bg-gray-50 px-4 py-3 rounded-xl border border-gray-200 min-w-[200px]">
+                      <span className="text-lg font-semibold text-gray-800">{profile.fullName}</span>
+                    </div>
                   )}
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <Label htmlFor="email" className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              <div className="space-y-4">
+                <Label htmlFor="email" className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                  <div className="w-1 h-4 bg-green-600 rounded-full"></div>
                   Email Address
                 </Label>
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-green-50 rounded-lg">
-                    <Mail className="h-5 w-5 text-green-700" />
+                <div className="flex items-center space-x-4">
+                  <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200 shadow-sm">
+                    <Mail className="h-6 w-6 text-green-700" />
                   </div>
                   {isEditing ? (
                     <Input
@@ -524,21 +678,24 @@ const CitizenProfile = () => {
                       onChange={(e) =>
                         setProfile({ ...profile, email: e.target.value })
                       }
-                      className="border-gray-300 focus:border-green-600 focus:ring-green-200 text-lg"
+                      className="border-2 border-gray-200 focus:border-green-500 focus:ring-green-200 text-lg px-4 py-3 rounded-xl shadow-sm focus:shadow-md transition-all duration-200"
                     />
                   ) : (
-                    <span className="text-lg font-medium text-gray-800">{profile.email}</span>
+                    <div className="bg-gray-50 px-4 py-3 rounded-xl border border-gray-200 min-w-[200px]">
+                      <span className="text-lg font-semibold text-gray-800">{profile.email}</span>
+                    </div>
                   )}
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <Label htmlFor="phone" className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              <div className="space-y-4">
+                <Label htmlFor="phone" className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                  <div className="w-1 h-4 bg-green-600 rounded-full"></div>
                   Phone Number
                 </Label>
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-green-50 rounded-lg">
-                    <Phone className="h-5 w-5 text-green-700" />
+                <div className="flex items-center space-x-4">
+                  <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200 shadow-sm">
+                    <Phone className="h-6 w-6 text-green-700" />
                   </div>
                   {isEditing ? (
                     <Input
@@ -547,10 +704,12 @@ const CitizenProfile = () => {
                       onChange={(e) =>
                         setProfile({ ...profile, phonenumber: e.target.value })
                       }
-                      className="border-gray-300 focus:border-green-600 focus:ring-green-200 text-lg"
+                      className="border-2 border-gray-200 focus:border-green-500 focus:ring-green-200 text-lg px-4 py-3 rounded-xl shadow-sm focus:shadow-md transition-all duration-200"
                     />
                   ) : (
-                    <span className="text-lg font-medium text-gray-800">{profile.phonenumber}</span>
+                    <div className="bg-gray-50 px-4 py-3 rounded-xl border border-gray-200 min-w-[200px]">
+                      <span className="text-lg font-semibold text-gray-800">{profile.phonenumber}</span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -559,73 +718,77 @@ const CitizenProfile = () => {
         </Card>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-gradient-to-br from-green-50 to-white border border-gray-200 shadow-sm hover:shadow-md rounded-lg overflow-hidden transition-all duration-300 hover:-translate-y-1">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-in-left" style={{ animationDelay: '0.2s' }}>
+          <Card className="bg-gradient-to-br from-slate-50 to-white border-0 shadow-lg hover:shadow-2xl rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-2 group">
+            <CardContent className="p-6 relative">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-slate-200 to-slate-300 rounded-full -mr-10 -mt-10 opacity-50 group-hover:opacity-70 transition-opacity duration-500"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <div className="text-3xl font-bold text-gray-900 mb-2">
+                  <div className="text-4xl font-bold text-slate-800 mb-3 group-hover:text-slate-900 transition-colors duration-300">
                     {myIssues.length}
                   </div>
-                  <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                  <p className="text-sm font-bold text-slate-600 uppercase tracking-wider">
                     Total Issues
                   </p>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <FileText className="h-8 w-8 text-gray-600" />
+                <div className="p-4 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl shadow-md group-hover:shadow-lg transition-all duration-300 group-hover:scale-110">
+                  <FileText className="h-8 w-8 text-slate-700" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md rounded-lg overflow-hidden transition-all duration-300 hover:-translate-y-1">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+          <Card className="bg-gradient-to-br from-green-50 to-white border-0 shadow-lg hover:shadow-2xl rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-2 group">
+            <CardContent className="p-6 relative">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-green-200 to-emerald-300 rounded-full -mr-10 -mt-10 opacity-50 group-hover:opacity-70 transition-opacity duration-500"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <div className="text-3xl font-bold text-green-700 mb-2">
+                  <div className="text-4xl font-bold text-green-700 mb-3 group-hover:text-green-800 transition-colors duration-300">
                     {myIssues.filter((issue) => issue.status === "Resolved").length}
                   </div>
-                  <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                  <p className="text-sm font-bold text-green-600 uppercase tracking-wider">
                     Resolved
                   </p>
                 </div>
-                <div className="p-3 bg-green-50 rounded-lg">
+                <div className="p-4 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl shadow-md group-hover:shadow-lg transition-all duration-300 group-hover:scale-110">
                   <CheckCircle className="h-8 w-8 text-green-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md rounded-lg overflow-hidden transition-all duration-300 hover:-translate-y-1">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+          <Card className="bg-gradient-to-br from-blue-50 to-white border-0 shadow-lg hover:shadow-2xl rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-2 group">
+            <CardContent className="p-6 relative">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-200 to-sky-300 rounded-full -mr-10 -mt-10 opacity-50 group-hover:opacity-70 transition-opacity duration-500"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <div className="text-3xl font-bold text-blue-700 mb-2">
+                  <div className="text-4xl font-bold text-blue-700 mb-3 group-hover:text-blue-800 transition-colors duration-300">
                     {myIssues.filter((issue) => issue.status === "In Progress").length}
                   </div>
-                  <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                  <p className="text-sm font-bold text-blue-600 uppercase tracking-wider">
                     In Progress
                   </p>
                 </div>
-                <div className="p-3 bg-blue-50 rounded-lg">
+                <div className="p-4 bg-gradient-to-br from-blue-100 to-sky-100 rounded-2xl shadow-md group-hover:shadow-lg transition-all duration-300 group-hover:scale-110">
                   <PlayCircle className="h-8 w-8 text-blue-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md rounded-lg overflow-hidden transition-all duration-300 hover:-translate-y-1">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+          <Card className="bg-gradient-to-br from-amber-50 to-white border-0 shadow-lg hover:shadow-2xl rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-2 group">
+            <CardContent className="p-6 relative">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-amber-200 to-orange-300 rounded-full -mr-10 -mt-10 opacity-50 group-hover:opacity-70 transition-opacity duration-500"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <div className="text-3xl font-bold text-amber-700 mb-2">
+                  <div className="text-4xl font-bold text-amber-700 mb-3 group-hover:text-amber-800 transition-colors duration-300">
                     {myIssues.filter((issue) => issue.status === "Pending").length}
                   </div>
-                  <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                  <p className="text-sm font-bold text-amber-600 uppercase tracking-wider">
                     Pending
                   </p>
                 </div>
-                <div className="p-3 bg-amber-50 rounded-lg">
+                <div className="p-4 bg-gradient-to-br from-amber-100 to-orange-100 rounded-2xl shadow-md group-hover:shadow-lg transition-all duration-300 group-hover:scale-110">
                   <Clock className="h-8 w-8 text-amber-600" />
                 </div>
               </div>
@@ -634,147 +797,229 @@ const CitizenProfile = () => {
         </div>
 
         {/* Issues Section */}
-        <Card className="bg-white border border-gray-200 shadow-lg rounded-lg overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-green-100 to-green-50 border-b border-green-200 text-gray-800 px-8 py-6">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between space-y-4 lg:space-y-0">
-              <div className="flex items-center space-x-4">
-                <div className="p-2 bg-green-600/20 rounded-lg">
-                  <FileText className="h-6 w-6 text-green-700" />
+        <Card className="bg-white border-0 shadow-xl rounded-2xl overflow-hidden animate-slide-in-left" style={{ animationDelay: '0.3s' }}>
+          <CardHeader className="bg-gradient-to-r from-green-600 via-green-500 to-emerald-600 border-0 text-white px-10 py-8 relative overflow-hidden">
+            <div className="absolute inset-0 bg-black/10"></div>
+            <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -mr-48 -mt-48"></div>
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full -ml-32 -mb-32"></div>
+            
+            <div className="relative z-10">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between space-y-6 lg:space-y-0">
+                <div className="flex items-center space-x-6">
+                  <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg">
+                    <FileText className="h-8 w-8 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-3xl font-bold text-white tracking-tight">My Reported Issues</CardTitle>
+                    <CardDescription className="text-green-100 text-xl mt-2 font-medium">
+                      Track and monitor all your reported issues
+                    </CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-2xl font-bold text-green-900">My Reported Issues</CardTitle>
-                  <CardDescription className="text-green-800 text-lg mt-1">
-                    Track and monitor all your reported issues
-                  </CardDescription>
+                
+                {/* Search and Filter Controls */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 w-full lg:w-auto">
+                  <div className="relative flex-1 lg:flex-initial">
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/70 h-5 w-5" />
+                    <Input
+                      placeholder="Search issues..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-12 bg-white/20 backdrop-blur-sm border-white/30 text-white placeholder:text-white/70 focus:bg-white/30 focus:border-white/50 focus:ring-white/20 rounded-xl py-3 text-lg"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-xl p-1 border border-white/20">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setViewMode('grid')}
+                      className={`p-3 transition-all duration-300 rounded-lg ${
+                        viewMode === 'grid' 
+                          ? 'bg-white text-green-700 shadow-md' 
+                          : 'text-white/90 hover:bg-white/20 hover:text-white'
+                      }`}
+                    >
+                      <Grid className="h-5 w-5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setViewMode('list')}
+                      className={`p-3 transition-all duration-300 rounded-lg ${
+                        viewMode === 'list' 
+                          ? 'bg-white text-green-700 shadow-md' 
+                          : 'text-white/90 hover:bg-white/20 hover:text-white'
+                      }`}
+                    >
+                      <List className="h-5 w-5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
               
-              {/* Search and Filter Controls */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-green-600/80 h-4 w-4" />
-                  <Input
-                    placeholder="Search issues..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-white border-green-300 text-green-900 placeholder:text-green-600/80 focus:bg-white focus:border-green-500"
-                  />
+              {/* Filter Buttons */}
+              <div className="flex flex-wrap items-center gap-4 mt-8">
+                <div className="flex items-center space-x-3 text-white/90 font-medium">
+                  <Filter className="h-5 w-5" />
+                  <span className="text-lg">Filter by status:</span>
                 </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setViewMode('grid')}
-                    className={`p-2 transition-all duration-200 ${
-                      viewMode === 'grid' 
-                        ? 'bg-green-600/20 text-green-800' 
-                        : 'text-green-700/80 hover:bg-green-600/10 hover:text-green-800'
-                    }`}
-                  >
-                    <Grid className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setViewMode('list')}
-                    className={`p-2 transition-all duration-200 ${
-                      viewMode === 'list' 
-                        ? 'bg-green-600/20 text-green-800' 
-                        : 'text-green-700/80 hover:bg-green-600/10 hover:text-green-800'
-                    }`}
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
+                <div className="flex flex-wrap gap-3">
+                  {(['all', 'Pending', 'In Progress', 'Resolved', 'Rejected'] as const).map((status) => (
+                    <Button
+                      key={status}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setFilterStatus(status)}
+                      className={`px-5 py-2.5 text-sm font-bold transition-all duration-300 rounded-xl backdrop-blur-sm ${
+                        filterStatus === status
+                          ? 'bg-white text-green-700 shadow-lg transform scale-105'
+                          : 'text-white/90 bg-white/10 hover:bg-white/20 border border-white/30 hover:border-white/50'
+                      }`}
+                    >
+                      {status === 'all' ? 'All Issues' : status}
+                      {status !== 'all' && (
+                        <Badge className={`ml-3 text-xs px-2 py-1 rounded-full ${
+                          filterStatus === status ? 'bg-green-100 text-green-800' : 'bg-white/20 text-white'
+                        }`}>
+                          {myIssues.filter((issue) => issue.status === status).length}
+                        </Badge>
+                      )}
+                    </Button>
+                  ))}
                 </div>
               </div>
-            </div>
-            
-            {/* Filter Buttons */}
-            <div className="flex flex-wrap items-center gap-3 mt-6">
-              <div className="flex items-center space-x-2 text-green-800/80">
-                <Filter className="h-4 w-4" />
-                <span className="text-sm font-medium">Filter by status:</span>
-              </div>
-              {(['all', 'Pending', 'In Progress', 'Resolved', 'Rejected'] as const).map((status) => (
-                <Button
-                  key={status}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setFilterStatus(status)}
-                  className={`px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
-                    filterStatus === status
-                      ? 'bg-green-700 text-white'
-                      : 'text-green-800 bg-white hover:bg-green-600/10 border border-green-300'
-                  }`}
-                >
-                  {status === 'all' ? 'All Issues' : status}
-                  {status !== 'all' && (
-                    <Badge className={`ml-2 text-xs px-1.5 py-0.5 ${
-                      filterStatus === status ? 'bg-white/30 text-white' : 'bg-green-100 text-green-800'
-                    }`}>
-                      {myIssues.filter((issue) => issue.status === status).length}
-                    </Badge>
-                  )}
-                </Button>
-              ))}
             </div>
           </CardHeader>
           
-          <CardContent className="p-8">
+          <CardContent className="p-10">
             {loadingMyIssues ? (
-              <div className="text-center py-16">
-                <div className="relative mx-auto mb-6">
-                  <div className="w-16 h-16 border-4 border-green-200 rounded-full animate-spin"></div>
-                  <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin absolute top-0"></div>
+              <div className="text-center py-24">
+                {/* Enhanced Issues Loading Animation */}
+                <div className="relative mx-auto mb-12">
+                  <div className="w-32 h-32 bg-gradient-to-br from-green-50 to-emerald-50 rounded-full flex items-center justify-center shadow-2xl relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-100 to-emerald-100 opacity-50"></div>
+                    <div className="w-24 h-24 border-4 border-green-200 rounded-full animate-spin"></div>
+                    <div className="w-24 h-24 border-4 border-green-600 border-t-transparent rounded-full animate-spin absolute"></div>
+                    <div className="absolute inset-4 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full blur-xl opacity-20 animate-pulse"></div>
+                  </div>
+                  
+                  {/* Floating Elements */}
+                  <div className="absolute -top-4 -left-4 w-8 h-8 bg-green-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="absolute -top-4 -right-4 w-6 h-6 bg-emerald-300 rounded-full animate-bounce" style={{ animationDelay: '200ms' }}></div>
+                  <div className="absolute -bottom-4 -left-4 w-6 h-6 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '400ms' }}></div>
+                  <div className="absolute -bottom-4 -right-4 w-8 h-8 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '600ms' }}></div>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-green-700 text-xl font-semibold">Loading Your Issues</p>
-                  <p className="text-gray-600">Please wait while we fetch your reported issues...</p>
+                
+                <div className="space-y-6 max-w-2xl mx-auto">
+                  <div className="inline-flex items-center space-x-4 bg-gradient-to-r from-green-50 to-emerald-50 px-8 py-4 rounded-full border border-green-200 shadow-lg">
+                    <div className="w-3 h-3 bg-green-600 rounded-full animate-pulse"></div>
+                    <h3 className="text-green-800 text-2xl font-bold">Loading Your Issues</h3>
+                  </div>
+                  <p className="text-gray-600 text-lg leading-relaxed px-4">
+                    Please wait while we fetch your reported issues...
+                  </p>
+                  <div className="flex justify-center space-x-2 mt-6">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-green-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
                 </div>
               </div>
             ) : filteredIssues.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-6">
-                  <FileText className="h-10 w-10 text-gray-400" />
+              <div className="text-center py-24">
+                {/* Enhanced Empty State Animation */}
+                <div className="relative mx-auto mb-12">
+                  <div className="w-32 h-32 bg-gradient-to-br from-slate-50 to-slate-100 rounded-3xl flex items-center justify-center mx-auto shadow-2xl relative overflow-hidden border border-slate-200">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-slate-100/40"></div>
+                    <div className="relative z-10">
+                      <FileText className="h-16 w-16 text-slate-400" />
+                    </div>
+                    
+                    {/* Floating Decorative Elements */}
+                    <div className="absolute top-4 right-4 w-10 h-10 bg-slate-200/40 rounded-full animate-pulse"></div>
+                    <div className="absolute bottom-4 left-4 w-8 h-8 bg-slate-200/40 rounded-full animate-pulse" style={{ animationDelay: '500ms' }}></div>
+                    <div className="absolute top-1/2 left-2 w-4 h-4 bg-slate-300/30 rounded-full animate-bounce" style={{ animationDelay: '200ms' }}></div>
+                    <div className="absolute top-1/3 right-2 w-3 h-3 bg-slate-300/30 rounded-full animate-bounce" style={{ animationDelay: '400ms' }}></div>
+                  </div>
+                  
+                  {/* Outer Glow Effect */}
+                  <div className="absolute -inset-6 bg-gradient-to-r from-slate-200 to-slate-300 rounded-full blur-2xl opacity-20 animate-pulse"></div>
                 </div>
-                <div className="space-y-4">
-                  <h3 className="text-xl font-semibold text-gray-800">
-                    {searchTerm || filterStatus !== 'all' ? 'No Issues Found' : 'No Issues Reported Yet'}
-                  </h3>
-                  <p className="text-gray-600 max-w-md mx-auto">
+                
+                <div className="space-y-8 max-w-3xl mx-auto">
+                  <div className="inline-flex items-center space-x-4 bg-gradient-to-r from-slate-50 to-slate-100 px-8 py-4 rounded-full border border-slate-200 shadow-lg">
+                    <div className="w-3 h-3 bg-slate-600 rounded-full animate-pulse"></div>
+                    <h3 className="text-slate-800 text-2xl font-bold">
+                      {searchTerm || filterStatus !== 'all' ? 'No Issues Found' : 'No Issues Reported Yet'}
+                    </h3>
+                  </div>
+                  
+                  <p className="text-gray-600 text-lg leading-relaxed px-6">
                     {searchTerm || filterStatus !== 'all' 
-                      ? 'Try adjusting your search terms or filters to find what you\'re looking for.'
-                      : 'You haven\'t reported any issues yet. Start by reporting your first issue to help improve your community.'
+                      ? 'Try adjusting your search terms or filters to find what you\'re looking for. We\'re here to help you locate the issues you need.'
+                      : 'You haven\'t reported any issues yet. Start by reporting your first issue to help improve your community and make a difference where you live.'
                     }
                   </p>
-                  {(searchTerm || filterStatus !== 'all') && (
-                    <Button 
-                      onClick={() => {
-                        setSearchTerm('');
-                        setFilterStatus('all');
-                      }}
-                      className="bg-green-700 hover:bg-green-800 text-white px-6 py-2"
-                    >
-                      Clear Filters
-                    </Button>
-                  )}
+                  
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
+                    {(searchTerm || filterStatus !== 'all') && (
+                      <Button 
+                        onClick={() => {
+                          setSearchTerm('');
+                          setFilterStatus('all');
+                        }}
+                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center space-x-2"
+                      >
+                        <Filter className="h-5 w-5" />
+                        Clear Filters
+                      </Button>
+                    )}
+                    
+                    {!searchTerm && filterStatus === 'all' && (
+                      <Button 
+                        onClick={() => {
+                          // Navigate to report issue page - this would need to be implemented
+                          window.location.href = '/citizen/report-issue';
+                        }}
+                        className="bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-700 hover:to-sky-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center space-x-2"
+                      >
+                        <FileText className="h-5 w-5" />
+                        Report Your First Issue
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {/* Helpful Tips */}
+                  <div className="mt-12 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200 max-w-2xl mx-auto">
+                    <h4 className="text-green-800 font-bold text-lg mb-3 flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                      <span>Pro Tip</span>
+                    </h4>
+                    <p className="text-green-700 text-sm leading-relaxed">
+                      {searchTerm || filterStatus !== 'all' 
+                        ? 'Try using broader search terms or selecting different status filters to see more results.'
+                        : 'Reporting issues helps your community identify and solve problems faster. Every report makes a difference!'
+                      }
+                    </p>
+                  </div>
                 </div>
               </div>
             ) : (
               <div>
                 {/* Results Summary */}
-                <div className="flex items-center justify-between mb-8 p-4 bg-green-50 rounded-lg border border-green-200">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-green-600 rounded-lg">
-                      <BarChart3 className="h-4 w-4 text-white" />
+                <div className="flex items-center justify-between mb-10 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200 shadow-sm">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl shadow-lg">
+                      <BarChart3 className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-sm text-green-800 font-medium">
+                      <p className="text-green-800 font-bold text-lg">
                         Showing {filteredIssues.length} of {myIssues.length} issues
                       </p>
                       {(searchTerm || filterStatus !== 'all') && (
-                        <p className="text-xs text-green-600 mt-0.5">
+                        <p className="text-green-600 text-sm mt-1 font-medium">
                           {searchTerm && `Search: "${searchTerm}"`}
                           {searchTerm && filterStatus !== 'all' && ' • '}
                           {filterStatus !== 'all' && `Filter: ${filterStatus}`}
@@ -782,7 +1027,7 @@ const CitizenProfile = () => {
                       )}
                     </div>
                   </div>
-                  <Badge className="bg-green-600 text-white px-3 py-1">
+                  <Badge className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-xl font-bold shadow-md">
                     {viewMode === 'grid' ? 'Grid View' : 'List View'}
                   </Badge>
                 </div>
@@ -790,18 +1035,38 @@ const CitizenProfile = () => {
                 {/* Issues Display */}
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredIssues.map((issue, index) => renderIssueCard(issue, index))}
+                    {filteredIssues.map((issue, index) => (
+                      <div 
+                        key={issue._id} 
+                        className="animate-scale-in" 
+                        style={{ animationDelay: `${0.1 + (index * 0.1)}s` }}
+                      >
+                        {renderIssueCard(issue, index)}
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {filteredIssues.map((issue, index) => renderIssueCard(issue, index))}
+                    {filteredIssues.map((issue, index) => (
+                      <div 
+                        key={issue._id} 
+                        className="animate-slide-in-left" 
+                        style={{ animationDelay: `${0.1 + (index * 0.1)}s` }}
+                      >
+                        {renderIssueCard(issue, index)}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
+
+      {/* Chatbot */}
+      <Chatbot />
     </div>
   );
 };

@@ -233,7 +233,8 @@ const SignUp = () => {
               <center>Create Account</center>
             </CardTitle>
             <CardDescription>
-              Join our community to report issues and help build better cities
+              Join our community to report issues and make your neighborhood
+              better
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -311,7 +312,7 @@ const SignUp = () => {
                           )}
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="citizen-phone">Phone Number</Label>
+                          <Label htmlFor="citizen-phonenumber">Phone Number</Label>
                           <Input
                             id="citizen-phone"
                             type="tel"
@@ -541,7 +542,7 @@ const SignUp = () => {
                           <Input
                             id="admin-code"
                             type="text"
-                            placeholder="Contact your supervisor for the code"
+                            placeholder="Contact supervisor for the code"
                             value={adminForm.adminAccessCode}
                             onChange={(e) =>
                               setAdminForm({
@@ -674,7 +675,10 @@ const SignUp = () => {
               <div className="mt-6 text-center">
                 <p className="text-sm text-muted-foreground">
                   Already have an account?{" "}
-                  <Link to="/signin" className="text-primary hover:underline">
+                  <Link
+                    to="/signin"
+                    className="text-blue-600 hover:text-blue-800 font-medium"
+                  >
                     Sign in here
                   </Link>
                 </p>

@@ -6,7 +6,6 @@ import Hero from "../components/Hero.tsx";
 import IssueTypes from "../components/IssueTypes.tsx";
 import CTA from "../components/CTA.tsx";
 import Footer from "../components/Footer.tsx";
-import { AuthProvider } from "../contexts/AuthContext.tsx";
 
 const Index = () => {
   const [featuresAnimationKey, setFeaturesAnimationKey] = useState(0);
@@ -39,18 +38,16 @@ const Index = () => {
         }}
       />
       <div className="relative z-10">
-        <AuthProvider>
-          <Header
-            onFeaturesClick={handleFeaturesClick}
-            onHowItWorksClick={handleHowItWorksClick}
-          />
-          <Hero />
-          <Features key={`features-${featuresAnimationKey}`} />
-          <IssueTypes />
-          <HowItWorks key={`how-${howItWorksAnimationKey}`} />
-          <CTA />
-          <Footer />
-        </AuthProvider>
+        <Header
+          onFeaturesClick={handleFeaturesClick}
+          onHowItWorksClick={handleHowItWorksClick}
+        />
+        <Hero />
+        <Features key={`features-${featuresAnimationKey}`} />
+        <IssueTypes />
+        <HowItWorks key={`how-${howItWorksAnimationKey}`} />
+        <CTA />
+        <Footer />
       </div>
     </div>
   );

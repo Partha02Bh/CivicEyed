@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import {
   Search,
   Plus,
@@ -19,15 +14,24 @@ import {
   TreePine,
   TrendingUp,
   Heart,
+  Eye,
+  Flame,
+  Calendar,
+  Tag,
+  Navigation,
+  X,
+  Megaphone,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { VITE_BACKEND_URL } from "../config/config";
 import Player from "lottie-react";
 import emptyAnimation from "../assets/animations/empty.json";
 import HeaderAfterAuth from "../components/HeaderAfterAuth";
+import Chatbot from "../components/Chatbot";
 import starloader from "../assets/animations/starloder.json";
 import { motion } from "framer-motion";
 import { useLoader } from "../contexts/LoaderContext";
+import { useAnnouncementNotification, markAnnouncementsAsViewed } from "../hooks/useAnnouncementNotification";
 
 interface Issues {
   _id: string;
@@ -57,11 +61,43 @@ const MIN_LOADER_DURATION = 2500;
 const LOCATION_RADIUS = 1; // km radius to consider as same area
 
 const CitizenHome = () => {
-  const [searchCity, setSearchCity] = useState("");
   const [reportedIssues, setReportedIssues] = useState<Issues[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchCity, setSearchCity] = useState("");
+  const [selectedIssue, setSelectedIssue] = useState<Issues | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const { hideLoader } = useLoader();
+  const { hasNewAnnouncements, newCount } = useAnnouncementNotification();
+
+  // Fetch issues
+  useEffect(() => {
+    const fetchIssues = async () => {
+      try {
+        const response = await fetch(`${VITE_BACKEND_URL}/api/v1/issues`);
+        const data = await response.json();
+        if (data.success) {
+          const issues = data.data || [];
+          // Sort issues by reportedAt timestamp (most recent first)
+          const sortedIssues = issues.sort((a: Issues, b: Issues) => {
+            const dateA = new Date(a.reportedAt).getTime();
+            const dateB = new Date(b.reportedAt).getTime();
+            return dateB - dateA; // Descending order (newest first)
+          });
+          setReportedIssues(sortedIssues);
+        }
+      } catch (error) {
+        console.error("Error fetching issues:", error);
+      } finally {
+        setLoading(false);
+        hideLoader();
+      }
+    };
+
+    fetchIssues();
+  }, [hideLoader]);
+
 
   // Calculate distance between two coordinates using Haversine formula
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -146,7 +182,14 @@ const CitizenHome = () => {
             return distance <= LOCATION_RADIUS;
           });
 
-          setReportedIssues(nearbyIssues);
+          // Sort nearby issues by reportedAt timestamp (most recent first)
+          const sortedNearbyIssues = nearbyIssues.sort((a: Issues, b: Issues) => {
+            const dateA = new Date(a.reportedAt).getTime();
+            const dateB = new Date(b.reportedAt).getTime();
+            return dateB - dateA; // Descending order (newest first)
+          });
+
+          setReportedIssues(sortedNearbyIssues);
         } else {
           setReportedIssues([]);
         }
@@ -161,7 +204,13 @@ const CitizenHome = () => {
           });
           const data = await response.json();
           if (Array.isArray(data.issues)) {
-            setReportedIssues(data.issues);
+            // Sort fallback issues by reportedAt timestamp (most recent first)
+            const sortedFallbackIssues = data.issues.sort((a: Issues, b: Issues) => {
+              const dateA = new Date(a.reportedAt).getTime();
+              const dateB = new Date(b.reportedAt).getTime();
+              return dateB - dateA; // Descending order (newest first)
+            });
+            setReportedIssues(sortedFallbackIssues);
           }
         } catch (fallbackError) {
           console.error("Fallback fetch failed:", fallbackError);
@@ -181,6 +230,17 @@ const CitizenHome = () => {
   }, [hideLoader]);
 
   const handleHypeIssue = async (issueId: string) => {
+    // Optimistic UI update
+    setReportedIssues(prev => prev.map(issue => issue._id === issueId 
+      ? { ...issue, hypePoints: (issue.hypePoints || 0) + (issue.userHasHyped ? 0 : 1), userHasHyped: true }
+      : issue
+    ));
+    // Sync modal state if open
+    setSelectedIssue(prev => prev && prev._id === issueId 
+      ? { ...prev, hypePoints: (prev.hypePoints || 0) + (prev.userHasHyped ? 0 : 1), userHasHyped: true }
+      : prev
+    );
+
     try {
       const response = await fetch(`${VITE_BACKEND_URL}/api/v1/issues/${issueId}/hype`, {
         method: 'POST',
@@ -192,20 +252,21 @@ const CitizenHome = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setReportedIssues(prev => 
-          prev.map(issue => 
-            issue._id === issueId 
-              ? { 
-                  ...issue, 
-                  hypePoints: data.hypePoints,
-                  userHasHyped: data.userHasHyped 
-                }
-              : issue
-          )
+        // Reconcile with server truth
+        setReportedIssues(prev => prev.map(issue => issue._id === issueId 
+          ? { ...issue, hypePoints: data.hypePoints, userHasHyped: data.userHasHyped }
+          : issue
+        ));
+        setSelectedIssue(prev => prev && prev._id === issueId 
+          ? { ...prev, hypePoints: data.hypePoints, userHasHyped: data.userHasHyped }
+          : prev
         );
+      } else {
+        console.error('Hype request failed', response.status);
       }
     } catch (error) {
       console.error("Error hyping issue:", error);
+      // Keep optimistic change; admin view will reflect once backend is up
     }
   };
 
@@ -311,6 +372,38 @@ const CitizenHome = () => {
               </Button>
             </Link>
 
+            <Link to="/citizen/announcements" onClick={() => markAnnouncementsAsViewed()}>
+              <Button
+                variant="outline"
+                size="lg"
+                className="relative bg-white/80 backdrop-blur-md border-blue-200 text-blue-700 px-10 py-4 text-lg font-semibold rounded-2xl hover:bg-blue-50 hover:border-blue-300 transition-all duration-300"
+              >
+                <Megaphone className="h-5 w-5 mr-2" />
+                Announcements
+                {hasNewAnnouncements && (
+                  <div className="absolute -top-2 -right-2 flex items-center justify-center">
+                    <div className="relative">
+                      <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
+                        <span className="text-white text-xs font-bold">{newCount > 9 ? '9+' : newCount}</span>
+                      </div>
+                      <div className="absolute inset-0 w-6 h-6 bg-red-500 rounded-full animate-ping opacity-40"></div>
+                    </div>
+                  </div>
+                )}
+              </Button>
+            </Link>
+
+            <Link to="/citizen/live-map">
+              <Button
+                variant="outline"
+                size="lg"
+                className="bg-white/80 backdrop-blur-md border-blue-200 text-blue-700 px-10 py-4 text-lg font-semibold rounded-2xl hover:bg-blue-50 hover:border-blue-300 transition-all duration-300"
+              >
+                <MapPin className="h-5 w-5 mr-2" />
+                Live Map
+              </Button>
+            </Link>
+
             <Link to="/citizen/profile">
               <Button
                 variant="outline"
@@ -348,24 +441,24 @@ const CitizenHome = () => {
           initial={{ y: 30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.6 }}
-          className="flex flex-col sm:flex-row items-center justify-between mb-12 p-8 bg-white/70 backdrop-blur-xl border border-green-100 rounded-3xl shadow-xl"
+          className="flex flex-col sm:flex-row items-center justify-between mb-12 p-6 lg:p-8 bg-white/80 backdrop-blur-xl border border-green-100/50 rounded-2xl shadow-xl shadow-green-50/50"
         >
           <div>
-            <h2 className="text-3xl font-bold text-green-800 mb-2">
+            <h2 className="text-2xl lg:text-3xl font-bold text-green-800 mb-2">
               Local Community Issues
               {searchCity && (
-                <span className="text-2xl font-normal text-green-600/70 ml-3">
+                <span className="text-xl lg:text-2xl font-normal text-green-600/70 ml-3">
                   in {searchCity}
                 </span>
               )}
             </h2>
-            <p className="text-green-600/80 flex items-center">
+            <p className="text-green-600/80 flex items-center text-sm lg:text-base">
               <TreePine className="h-4 w-4 mr-2" />
               Issues within {LOCATION_RADIUS}km of your area
             </p>
           </div>
           <div className="text-center sm:text-right mt-4 sm:mt-0">
-            <div className="text-5xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+            <div className="text-4xl lg:text-5xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
               {filteredIssues.length}
             </div>
             <div className="text-green-600/70 text-sm font-medium">
@@ -381,7 +474,7 @@ const CitizenHome = () => {
           transition={{ delay: 0.8, duration: 0.6 }}
         >
           {filteredIssues.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 max-h-[900px] overflow-y-auto pr-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 lg:gap-8 max-h-[900px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-green-200 scrollbar-track-transparent">
               {filteredIssues.map((issue, index) => (
                 <motion.div
                   key={issue._id}
@@ -390,13 +483,13 @@ const CitizenHome = () => {
                   transition={{ delay: 0.1 * index, duration: 0.5 }}
                 >
                   <Card
-                    className={`group relative overflow-hidden bg-white/80 backdrop-blur-xl border-green-100 rounded-3xl hover:bg-white/90 hover:border-green-200 hover:scale-[1.02] hover:shadow-2xl transition-all duration-500 shadow-lg ${
+                    className={`group relative overflow-hidden bg-white/90 backdrop-blur-xl border border-green-100/50 rounded-2xl hover:bg-white hover:border-green-200 hover:scale-[1.02] hover:shadow-2xl hover:shadow-green-100/20 transition-all duration-500 shadow-lg shadow-green-50/50 ${
                       issue.status === "Rejected"
                         ? "opacity-50 grayscale"
                         : "opacity-100"
                     }`}
                   >
-                    <div className="relative h-56 overflow-hidden">
+                    <div className="relative h-48 overflow-hidden rounded-t-2xl">
                       <img
                         src={issue.image || "/placeholder.jpg"}
                         alt={issue.title}
@@ -421,62 +514,76 @@ const CitizenHome = () => {
                     </div>
 
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-xl font-bold text-green-800 group-hover:text-green-700 transition-colors">
+                      <CardTitle className="text-lg font-bold text-green-800 group-hover:text-green-700 transition-colors line-clamp-1">
                         {issue.title}
                       </CardTitle>
                     </CardHeader>
 
-                    <CardContent className="space-y-4">
-                      <p className="text-green-700/80 line-clamp-3 leading-relaxed">
+                    <CardContent className="space-y-3 p-4">
+                      <p className="text-green-700/80 line-clamp-2 leading-relaxed text-sm">
                         {issue.description}
                       </p>
 
-                      <div className="space-y-3 text-sm">
+                      <div className="space-y-2 text-sm">
                         <div className="flex items-center text-green-600/80">
-                          <MapPin className="h-4 w-4 mr-3 text-green-500 flex-shrink-0" />
-                          <span className="flex-1">
+                          <MapPin className="h-3.5 w-3.5 mr-2 text-green-500 flex-shrink-0" />
+                          <span className="flex-1 truncate text-xs">
                             {issue.location.address}
                           </span>
                         </div>
 
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center text-green-600/80">
-                            <User className="h-4 w-4 mr-2 text-green-500" />
-                            <span>By {issue.reportedBy}</span>
+                          <div className="flex items-center text-green-600/80 min-w-0">
+                            <User className="h-3.5 w-3.5 mr-2 text-green-500 flex-shrink-0" />
+                            <span className="truncate text-xs">By {issue.reportedBy}</span>
                           </div>
-                          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                          <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex-shrink-0 ml-2">
                             {issue.type}
                           </span>
                         </div>
 
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center text-green-600/80">
-                            <Clock className="h-4 w-4 mr-2 text-green-500" />
-                            <span>{issue.reportedAt}</span>
-                          </div>
+                        <div className="flex items-center text-green-600/80">
+                          <Clock className="h-3.5 w-3.5 mr-2 text-green-500 flex-shrink-0" />
+                          <span className="text-xs">{issue.reportedAt}</span>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center justify-between pt-3 border-t border-green-100/50 gap-2">
+                          <Button
+                            onClick={() => {
+                              setSelectedIssue(issue);
+                              setIsViewModalOpen(true);
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center space-x-1 bg-blue-50/80 border-blue-200/60 text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-all duration-300 text-xs px-3 py-1.5 h-auto"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            <span className="font-medium">View</span>
+                          </Button>
                           
                           {/* Hype Button */}
                           <Button
                             onClick={() => handleHypeIssue(issue._id)}
-                            variant="outline"
+                            variant={issue.userHasHyped ? "default" : "outline"}
                             size="sm"
                             disabled={issue.userHasHyped}
-                            className={`flex items-center space-x-1 transition-all duration-300 ${
+                            className={`flex items-center space-x-1 transition-all duration-300 text-xs px-3 py-1.5 h-auto ${
                               issue.userHasHyped 
-                                ? 'bg-red-50 border-red-200 text-red-600 cursor-not-allowed' 
+                                ? 'bg-red-500 text-white border-red-600 cursor-not-allowed' 
                                 : 'hover:bg-red-50 hover:border-red-300 hover:text-red-600'
                             }`}
                           >
-                            <Heart 
-                              className={`h-4 w-4 ${
-                                issue.userHasHyped ? 'fill-current text-red-500' : ''
+                            <Flame 
+                              className={`h-3.5 w-3.5 ${
+                                issue.userHasHyped ? 'text-white' : ''
                               }`} 
                             />
-                            <span className="text-xs font-medium">
+                            <span className="font-medium">
                               {issue.userHasHyped ? 'Hyped!' : 'Hype'}
                             </span>
                             {issue.hypePoints !== undefined && issue.hypePoints > 0 && (
-                              <span className="text-xs">({issue.hypePoints})</span>
+                              <span>({issue.hypePoints})</span>
                             )}
                           </Button>
                         </div>
@@ -517,13 +624,189 @@ const CitizenHome = () => {
                   className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-10 py-4 text-lg font-semibold rounded-2xl shadow-xl hover:shadow-2xl transition-all"
                 >
                   <Plus className="h-5 w-5 mr-2" />
-                  Report New Issue
+Report New Issue
                 </Button>
               </Link>
             </motion.div>
           )}
         </motion.div>
       </main>
+
+      {/* Issue Detail Modal */}
+      {isViewModalOpen && selectedIssue && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-green-800">
+                  {selectedIssue.title}
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsViewModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              
+              <div className="space-y-6">
+                {/* Issue Image */}
+                <div className="relative h-80 overflow-hidden rounded-xl">
+                  <img
+                    src={selectedIssue.image || "/placeholder.jpg"}
+                    alt={selectedIssue.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  <div
+                    className={`absolute top-4 right-4 px-4 py-2 rounded-full text-sm font-bold ${
+                      getStatusColor(selectedIssue.status)
+                    } shadow-lg backdrop-blur-sm`}
+                  >
+                    {selectedIssue.status}
+                  </div>
+                  
+                  {/* Hype Points Display */}
+                  {selectedIssue.hypePoints !== undefined && selectedIssue.hypePoints > 0 && (
+                    <div className="absolute top-4 left-4 flex items-center bg-red-500/90 backdrop-blur-sm px-3 py-2 rounded-full text-white text-sm font-semibold">
+                      <TrendingUp className="h-4 w-4 mr-1" />
+                      {selectedIssue.hypePoints} Hype Points
+                    </div>
+                  )}
+                </div>
+
+                {/* Issue Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left Column */}
+                  <div className="space-y-4">
+                    <Card className="bg-green-50 border-green-200">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg text-green-800 flex items-center">
+                          <Tag className="h-5 w-5 mr-2" />
+                          Issue Details
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-green-600 font-medium">Type:</span>
+                          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                            {selectedIssue.type}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-green-600 font-medium">Status:</span>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            getStatusColor(selectedIssue.status)
+                          }`}>
+                            {selectedIssue.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-green-600 font-medium">Reported By:</span>
+                          <span className="text-green-800 font-semibold">{selectedIssue.reportedBy}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-green-600 font-medium">Date Reported:</span>
+                          <div className="flex items-center text-green-800">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            <span>{selectedIssue.reportedAt}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-blue-50 border-blue-200">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg text-blue-800 flex items-center">
+                          <Navigation className="h-5 w-5 mr-2" />
+                          Location Information
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-start space-x-3">
+                          <MapPin className="h-5 w-5 text-blue-500 mt-1 flex-shrink-0" />
+                          <div>
+                            <p className="text-blue-800 font-medium mb-1">Address:</p>
+                            <p className="text-blue-600 text-sm leading-relaxed">
+                              {selectedIssue.location.address}
+                            </p>
+                            <div className="mt-2 text-xs text-blue-500">
+                              <span>Lat: {selectedIssue.location.latitude.toFixed(6)}</span>
+                              <span className="ml-4">Lng: {selectedIssue.location.longitude.toFixed(6)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="space-y-4">
+                    <Card className="bg-amber-50 border-amber-200">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg text-amber-800">Description</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-amber-700 leading-relaxed">
+                          {selectedIssue.description}
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    {/* Community Engagement */}
+                    <Card className="bg-red-50 border-red-200">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg text-red-800 flex items-center">
+                          <Heart className="h-5 w-5 mr-2" />
+                          Community Engagement
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-red-600 font-medium">Hype Points:</span>
+                          <div className="flex items-center space-x-2">
+                            <TrendingUp className="h-4 w-4 text-red-500" />
+                            <span className="text-red-800 font-bold text-lg">
+                              {selectedIssue.hypePoints || 0}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <Button
+                          onClick={() => handleHypeIssue(selectedIssue._id)}
+                          disabled={selectedIssue.userHasHyped}
+                          variant={selectedIssue.userHasHyped ? 'default' : undefined}
+                          className={`w-full transition-all duration-300 ${
+                            selectedIssue.userHasHyped
+                              ? 'bg-red-500 text-white cursor-not-allowed border-red-600'
+                              : 'bg-red-500 hover:bg-red-600 text-white'
+                          }`}
+                        >
+                          <Flame 
+                            className={`h-4 w-4 mr-2 ${
+                              selectedIssue.userHasHyped ? 'text-white' : ''
+                            }`} 
+                          />
+                          {selectedIssue.userHasHyped ? 'Hyped!' : 'Hype This Issue'}
+                        </Button>
+                        
+                        <p className="text-red-600 text-xs text-center">
+                          Help bring attention to important community issues
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chatbot */}
+      <Chatbot />
     </motion.div>
   );
 };

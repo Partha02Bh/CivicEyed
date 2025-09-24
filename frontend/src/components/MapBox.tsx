@@ -23,9 +23,13 @@ const defaultIcon = new L.Icon({
 
 const MapComponent: React.FC<MapComponentProps> = ({
   onLocationSelect,
-  initialLat = 12.954864215243662, // default fallback
-  initialLng = 77.57164927572299,
+  initialLat,
+  initialLng,
 }) => {
+  // Use user's location if provided, otherwise fall back to hardcoded coordinates
+  const mapLat = initialLat ?? 12.954864215243662;
+  const mapLng = initialLng ?? 77.57164927572299;
+  
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -35,7 +39,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
     // Initialize Leaflet map
     mapRef.current = L.map(mapContainer.current, {
-      center: [initialLat, initialLng],
+      center: [mapLat, mapLng],
       zoom: 12,
       zoomControl: true,
     });
@@ -50,14 +54,14 @@ const MapComponent: React.FC<MapComponentProps> = ({
     const container = mapRef.current.getContainer();
 
     // Place initial marker from AI/user location
-    markerRef.current = L.marker([initialLat, initialLng], {
+    markerRef.current = L.marker([mapLat, mapLng], {
       draggable: true,
       icon: defaultIcon,
     }).addTo(mapRef.current);
 
     // Trigger reverse geocode for initial marker
-    reverseGeocode(initialLat, initialLng).then((address) => {
-      onLocationSelect(initialLat, initialLng, address);
+    reverseGeocode(mapLat, mapLng).then((address) => {
+      onLocationSelect(mapLat, mapLng, address);
     });
 
     // Cursor feedback
@@ -99,7 +103,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
       mapRef.current = null;
       markerRef.current = null;
     };
-  }, [initialLat, initialLng, onLocationSelect]);
+  }, [mapLat, mapLng, onLocationSelect]);
 
   async function reverseGeocode(lat: number, lng: number): Promise<string> {
     try {

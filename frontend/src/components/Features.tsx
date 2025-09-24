@@ -19,25 +19,23 @@ const fadeInUp = {
 };
 
 const Features = () => {
+  
   // Simplified features array, color is now handled by the theme
   const features = [
     {
       icon: Camera,
       title: "Photo Documentation",
-      description:
-        "Capture and upload high-quality images of infrastructure issues with automatic metadata tagging.",
+      description: "Capture and upload high-quality images of infrastructure issues with automatic metadata tagging.",
     },
     {
       icon: MapPin,
       title: "GPS Location Tracking",
-      description:
-        "Precise location capture using GPS coordinates ensures accurate issue positioning and faster response.",
+      description: "Precise location capture using GPS coordinates ensures accurate issue positioning and faster response.",
     },
     {
       icon: Users,
       title: "Community Engagement",
-      description:
-        "Connect with neighbors, track issue status, and see the impact of your reports on the community.",
+      description: "Connect with neighbors, track issue status, and see the impact of your reports on the community.",
     },
     {
       icon: Zap,
@@ -64,8 +62,8 @@ const Features = () => {
     <section id="features" className="py-20 bg-green-50/70">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-green-900 mb-4">
-            Powerful Features for Better Communities
+          <h2 className="text-4xl font-bold text-center text-green-900 mb-4">
+Why Choose CivicEye?
           </h2>
           <p className="text-xl text-green-700 max-w-2xl mx-auto">
             Everything you need to report, track, and resolve civic issues

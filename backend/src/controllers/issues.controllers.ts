@@ -11,7 +11,7 @@ export const createIssue = async (
     console.log("req.files:", req.files);
     const files = (req.files as Express.Multer.File[]) || [];
 
-    const { title = "Untitled", description, location, issueType } = req.body;
+    const { title = "Untitled", description, location, issueType, language = "en" } = req.body;
     // location stuff
 
     // let parsedLocation = location;
@@ -68,6 +68,7 @@ if (typeof location === "string") {
       location: parsedLocation,
       status: "Reported",
       multimediaId: (req as any).multimediaId,
+      language: language || "en",
     });
 
     const mediaDocs = await Promise.all(
@@ -94,13 +95,29 @@ if (typeof location === "string") {
 
 export const getIssues = async (req: Request, res: Response) => {
   try {
-    const issues = await IssueModel.find({})
+    const { language } = req.query;
+    
+    // Build filter object
+    const filter: any = {};
+    if (language && ["en", "hi", "kn"].includes(language as string)) {
+      filter.language = language;
+    }
+    
+    const issues = await IssueModel.find(filter)
       .populate("citizenId", "fullName")
       .lean();
 
     const issuesWithMedia = await Promise.all(
       issues.map(async (issue) => {
         const media = await MultimediaModel.find({ issueID: issue._id });
+        // Build absolute URL if needed
+        const firstUrl = media.length > 0 ? (media[0] as any).url : null;
+        const base = `${req.protocol}://${req.get("host")}`;
+        const imageUrl = firstUrl
+          ? (firstUrl.startsWith("http://") || firstUrl.startsWith("https://")
+              ? firstUrl
+              : `${base}/${firstUrl.replace(/^\//, "")}`)
+          : null;
         return {
           _id: issue._id,
           title: issue.title,
@@ -109,8 +126,12 @@ export const getIssues = async (req: Request, res: Response) => {
           location: issue.location, //  send only address
           reportedBy: (issue.citizenId as any)?.fullName || "Anonymous",
           reportedAt: issue.createdAt,
-          image: media.length > 0 ? media[0].url : null,
+          image: imageUrl,
           status: issue.status,
+          hypePoints: issue.hypePoints || 0,
+          userHasHyped: Array.isArray((issue as any).hypedBy)
+            ? (issue as any).hypedBy.some((id: any) => id?.toString() === req.citizenId)
+            : false,
         };
       })
     );
@@ -121,5 +142,48 @@ export const getIssues = async (req: Request, res: Response) => {
     res.status(500).json({
       message: "Something went wrong",
     });
+  }
+};
+
+export const hypeIssue = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const citizenId = req.citizenId;
+
+    if (!citizenId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    // Attempt atomic update: only hype if user hasn't hyped before
+    const updated = await IssueModel.findOneAndUpdate(
+      { _id: id, hypedBy: { $ne: citizenId } },
+      { $addToSet: { hypedBy: citizenId }, $inc: { hypePoints: 1 } },
+      { new: true }
+    ).lean();
+
+    if (!updated) {
+      // Either issue not found or already hyped by this user
+      const existing = await IssueModel.findById(id).lean();
+      if (!existing) {
+        res.status(404).json({ message: "Issue not found" });
+        return;
+      }
+      res.status(200).json({
+        message: "Already hyped",
+        hypePoints: existing.hypePoints || 0,
+        userHasHyped: true,
+      });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Hype added",
+      hypePoints: updated.hypePoints || 0,
+      userHasHyped: true,
+    });
+  } catch (error) {
+    console.error("Error hyping issue:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };

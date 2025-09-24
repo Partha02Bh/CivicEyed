@@ -103,8 +103,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         logout();
         setIsLoading(false);
       }
+    } else {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   const login = async (
@@ -163,6 +164,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       localStorage.setItem("auth_token", result.token);
       localStorage.setItem("auth_user", JSON.stringify(authUser));
+      localStorage.setItem("auth_role", authUser.role);
+      localStorage.setItem("auth_user_id", authUser.id);
 
       console.log("Auth User After Login:", authUser);
 
@@ -205,6 +208,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setToken(null);
     localStorage.removeItem("auth_token");
     localStorage.removeItem("auth_user");
+    localStorage.removeItem("auth_role");
+    localStorage.removeItem("auth_user_id");
   };
 
   const updateUserProfile = async (updatedData: Partial<User>) => {

@@ -22,4 +22,6 @@ router.post("/citizen/create-issue", auth_middleware_1.authMiddleware, (req, res
     });
 }, issues_controllers_1.createIssue);
 router.get("/all-issues", auth_middleware_1.authMiddleware, issues_controllers_1.getIssues);
+// Hype an issue (upvote-like)
+router.post("/issues/:id/hype", auth_middleware_1.authMiddleware, issues_controllers_1.hypeIssue);
 exports.default = router;

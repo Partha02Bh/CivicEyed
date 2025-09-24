@@ -25,7 +25,7 @@ const Hero = () => {
             <div className="space-y-8 animate-slide-in-left">
               <div className="space-y-4">
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-green-900/90 leading-tight">
-                  Report Issues,
+Report Issues,
                   <br />
                   <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
                     Transform
@@ -34,7 +34,7 @@ const Hero = () => {
                   Your Community
                 </h1>
                 <p className="text-xl text-green-700/80 max-w-lg leading-relaxed">
-                  Help build safer, cleaner neighborhoods by reporting
+Help build safer, cleaner neighborhoods by reporting
                   infrastructure issues. From potholes to broken streetlights,
                   your voice matters.
                 </p>

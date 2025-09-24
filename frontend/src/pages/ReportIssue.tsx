@@ -6,7 +6,7 @@
 // NEW: Install the HEIC conversion library
 // npm install heic2any
 
-import { useCallback, useState, useRef, FormEvent, ChangeEvent } from "react";
+import { useState, useRef, useCallback, useEffect, type FormEvent, type ChangeEvent } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
@@ -29,9 +29,14 @@ import {
   Navigation,
   Shield,
   Camera,
-  AlertTriangle,
   X,
   MapPinIcon,
+  Mic,
+  MicOff,
+  Volume2,
+  Languages,
+  AlertTriangle,
+  Zap,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import MapComponent from "../components/MapBox";
@@ -57,6 +62,8 @@ interface FormDataState {
   issueLocation: string;
   issueType: string;
   location: LocationState;
+  severityScore?: number;
+  urgencyLevel?: string;
 }
 
 // A simplified type for the data we extract from EXIF
@@ -90,6 +97,20 @@ interface GpsCoordinates {
     longitude: number;
     altitude: number | null;
     timestamp: string | null;
+}
+
+interface SeverityAnalysis {
+  score: number;
+  level: string;
+  reasoning: string;
+  priority: 'Low' | 'Medium' | 'High' | 'Critical';
+}
+
+interface VoiceRecording {
+  isRecording: boolean;
+  transcript: string;
+  translatedText: string;
+  detectedLanguage: string;
 }
 
 
@@ -322,6 +343,9 @@ const ReportIssue = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recognitionRef = useRef<any>(null);
+  
   const [formData, setFormData] = useState<FormDataState>({
     title: "",
     issueDescription: "",
@@ -332,6 +356,8 @@ const ReportIssue = () => {
       latitude: null,
       longitude: null,
     },
+    severityScore: undefined,
+    urgencyLevel: undefined,
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -340,6 +366,15 @@ const ReportIssue = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showCameraOptions, setShowCameraOptions] = useState(false);
   const [gpsFromImage, setGpsFromImage] = useState(false);
+  const [severityAnalysis, setSeverityAnalysis] = useState<SeverityAnalysis | null>(null);
+  const [voiceRecording, setVoiceRecording] = useState<VoiceRecording>({
+    isRecording: false,
+    transcript: "",
+    translatedText: "",
+    detectedLanguage: ""
+  });
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const handleInputChange = (field: keyof Omit<FormDataState, 'location'>, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -353,6 +388,66 @@ const ReportIssue = () => {
     }));
     setGpsFromImage(false);
   }, []);
+
+  // Function to automatically get user's location on component mount
+  const getInitialUserLocation = useCallback(async () => {
+    try {
+      if (!navigator.geolocation) {
+        console.log("Geolocation is not supported by this browser.");
+        return;
+      }
+      
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, (error) => {
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              console.log("User denied the request for Geolocation.");
+              break;
+            case error.POSITION_UNAVAILABLE:
+              console.log("Location information is unavailable.");
+              break;
+            case error.TIMEOUT:
+              console.log("The request to get user location timed out.");
+              break;
+            default:
+              console.log("An unknown error occurred.");
+              break;
+          }
+          reject(error);
+        }, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        });
+      });
+      
+      const { latitude: lat, longitude: lng } = position.coords;
+      setUserLocation({ lat, lng });
+      
+      // Also update the form data with the location
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+      const data = await response.json();
+      const address = data.display_name || "Address not found";
+      
+      setFormData((prev) => ({
+        ...prev,
+        location: { address, latitude: lat, longitude: lng },
+        issueLocation: address,
+      }));
+      
+      // Show success message
+      toast.success("Your location has been detected automatically!");
+      
+    } catch (error) {
+      console.log("Could not get initial user location:", error);
+      // Silently fail - user can still manually select location or use the "Use Current" button
+    }
+  }, []);
+
+  // Get user location on component mount
+  useEffect(() => {
+    getInitialUserLocation();
+  }, [getInitialUserLocation]);
 
   const captureUserLocation = async () => {
     setLocationLoading(true);
@@ -409,7 +504,7 @@ const ReportIssue = () => {
         body: JSON.stringify({
           contents: [{
             parts: [
-              { text: `Analyze this image of a civic issue and provide a JSON object with: "title" (string, max 60 chars), "description" (string, 100-300 words), "issueType" (one of: "Road Infrastructure", "Waste Management", "Environmental Issues", "Utilities & Infrastructure", "Public Safety", "Other"), "location" (string, visible landmarks).` },
+              { text: `Analyze this image of a civic issue and provide a JSON object with: "title" (string, max 60 chars), "description" (string, 100-300 words), "issueType" (one of: "Road Infrastructure", "Waste Management", "Environmental Issues", "Utilities & Infrastructure", "Public Safety", "Other"), "location" (string, visible landmarks), "severity" (object with "score" (1-10 where 10 is most severe), "level" ("Low", "Medium", "High", "Critical"), "reasoning" (string explaining the severity), "priority" ("Low", "Medium", "High", "Critical")). Consider factors like: flooded roads (9-10), major potholes (7-8), broken streetlights (5-6), litter (2-3), minor cracks (1-2).` },
               { inline_data: { mime_type: "image/jpeg", data: base64Image } },
             ],
           }],
@@ -423,14 +518,29 @@ const ReportIssue = () => {
       if (!jsonMatch) throw new Error("No valid JSON response from AI.");
       
       const analysis = JSON.parse(jsonMatch[0]);
+      
+      // Update form data with AI analysis including severity
       setFormData((prev) => ({
         ...prev,
         title: analysis.title || prev.title,
         issueDescription: analysis.description || prev.issueDescription,
         issueType: analysis.issueType || prev.issueType,
         issueLocation: prev.location.address || analysis.location || prev.issueLocation,
+        severityScore: analysis.severity?.score,
+        urgencyLevel: analysis.severity?.level,
       }));
-      toast.success("AI analysis complete! Form auto-filled.");
+      
+      // Set severity analysis for display
+      if (analysis.severity) {
+        setSeverityAnalysis({
+          score: analysis.severity.score,
+          level: analysis.severity.level,
+          reasoning: analysis.severity.reasoning,
+          priority: analysis.severity.priority
+        });
+      }
+      
+      toast.success("AI analysis complete! Form auto-filled with severity assessment.");
     } catch (error: any) {
       console.error("Error analyzing image:", error);
       toast.error("Failed to analyze image. Please fill details manually.");
@@ -528,7 +638,113 @@ const ReportIssue = () => {
   };
   
   const handleReanalyze = () => {
-    if (selectedFile) analyzeImageWithAI(selectedFile);
+    if (selectedFile) {
+      setSeverityAnalysis(null);
+      analyzeImageWithAI(selectedFile);
+    }
+  };
+
+  // Voice Recording Functions
+  const startVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // Initialize Speech Recognition if available
+      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = true;
+        recognitionRef.current.lang = 'auto'; // Auto-detect language
+        
+        recognitionRef.current.onresult = (event: any) => {
+          let finalTranscript = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            }
+          }
+          if (finalTranscript) {
+            setVoiceRecording(prev => ({
+              ...prev,
+              transcript: finalTranscript
+            }));
+            // Auto-translate if needed
+            translateText(finalTranscript);
+          }
+        };
+        
+        recognitionRef.current.start();
+      }
+      
+      setVoiceRecording(prev => ({ ...prev, isRecording: true }));
+      toast.success("Voice recording started. Speak now...");
+    } catch (error) {
+      console.error('Error starting voice recording:', error);
+      toast.error('Failed to start voice recording. Please check microphone permissions.');
+    }
+  };
+
+  const stopVoiceRecording = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setVoiceRecording(prev => ({ ...prev, isRecording: false }));
+    toast.success("Voice recording stopped.");
+  };
+
+  const translateText = async (text: string) => {
+    if (!text.trim()) return;
+    
+    setIsTranslating(true);
+    try {
+      // Using Google Translate API (you might need to set up your own translation service)
+      // For now, we'll use a simple detection and provide the text as-is
+      // In a real implementation, you'd integrate with Google Translate API or similar
+      
+      // Simple language detection (basic implementation)
+      const detectedLang = detectLanguage(text);
+      
+      setVoiceRecording(prev => ({
+        ...prev,
+        detectedLanguage: detectedLang,
+        translatedText: text // In real implementation, this would be translated
+      }));
+      
+      // Auto-fill the description with voice input
+      setFormData(prev => ({
+        ...prev,
+        issueDescription: prev.issueDescription + (prev.issueDescription ? ' ' : '') + text
+      }));
+      
+    } catch (error) {
+      console.error('Translation error:', error);
+      toast.error('Translation failed, but text was added to description.');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const detectLanguage = (text: string): string => {
+    // Simple language detection based on character patterns
+    // In a real implementation, you'd use a proper language detection service
+    const hindiPattern = /[\u0900-\u097F]/;
+    const arabicPattern = /[\u0600-\u06FF]/;
+    const chinesePattern = /[\u4e00-\u9fff]/;
+    
+    if (hindiPattern.test(text)) return 'Hindi';
+    if (arabicPattern.test(text)) return 'Arabic';
+    if (chinesePattern.test(text)) return 'Chinese';
+    return 'English';
+  };
+
+  const clearVoiceInput = () => {
+    setVoiceRecording({
+      isRecording: false,
+      transcript: "",
+      translatedText: "",
+      detectedLanguage: ""
+    });
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -547,6 +763,18 @@ const ReportIssue = () => {
       data.append("description", formData.issueDescription);
       data.append("issueType", formData.issueType);
       data.append("location", JSON.stringify(formData.location));
+      
+      // Add severity data if available
+      if (formData.severityScore) {
+        data.append("severityScore", formData.severityScore.toString());
+      }
+      if (formData.urgencyLevel) {
+        data.append("urgencyLevel", formData.urgencyLevel);
+      }
+      if (severityAnalysis) {
+        data.append("severityAnalysis", JSON.stringify(severityAnalysis));
+      }
+      
       if (selectedFile) data.append("files", selectedFile);
       
       const response = await fetch(`${VITE_BACKEND_URL}/api/v1/citizen/create-issue`, {
@@ -628,19 +856,84 @@ const ReportIssue = () => {
         </div>
       )}
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 w-full border-b border-green-200/50 bg-white/80 backdrop-blur-xl">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <Link to="/citizen">
-              <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-green-700 hover:text-green-800 hover:bg-green-100/50">
-                <ArrowLeft className="h-4 w-4" /> <span>Back to Dashboard</span>
-              </Button>
-            </Link>
-            <h1 className="text-lg font-bold text-green-800">Report a New Issue</h1>
-            <div className="w-40"></div> {/* Spacer */}
+      {/* Enhanced Professional Header */}
+      <header className="sticky top-0 z-40 w-full border-b border-green-200/30 bg-gradient-to-r from-white via-green-50/30 to-white/90 backdrop-blur-xl shadow-sm">
+        {/* Decorative Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-20 -left-20 w-40 h-40 bg-gradient-to-br from-green-200/20 to-emerald-300/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-blue-200/20 to-cyan-300/20 rounded-full blur-2xl animate-pulse delay-1000"></div>
+          <div className="absolute bottom-0 left-1/2 w-24 h-24 bg-gradient-to-br from-purple-200/20 to-pink-300/20 rounded-full blur-xl animate-pulse delay-2000"></div>
+        </div>
+        
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="flex h-20 items-center justify-between">
+            {/* Back Button */}
+            <motion.div
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            >
+              <Link to="/citizen">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="flex items-center space-x-2 text-green-700 hover:text-green-800 hover:bg-gradient-to-r hover:from-green-100/50 hover:to-emerald-100/50 border border-green-200/30 hover:border-green-300/50 rounded-xl px-4 py-2 transition-all duration-300 shadow-sm hover:shadow-md"
+                >
+                  <motion.div
+                    whileHover={{ x: -3 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </motion.div>
+                  <span className="font-medium">Back to Dashboard</span>
+                </Button>
+              </Link>
+            </motion.div>
+            
+            {/* Center Content */}
+            <motion.div 
+              className="text-center"
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
+            >
+              <div className="flex items-center justify-center space-x-3 mb-1">
+                <motion.div
+                  animate={{ 
+                    rotate: [0, 10, -10, 0],
+                    scale: [1, 1.1, 1]
+                  }}
+                  transition={{ 
+                    duration: 2, 
+                    repeat: Infinity, 
+                    repeatDelay: 3,
+                    ease: "easeInOut"
+                  }}
+                  className="p-2 rounded-xl bg-gradient-to-br from-green-400/20 to-emerald-500/20 backdrop-blur-sm border border-green-300/30"
+                >
+                  <Shield className="w-6 h-6 text-green-600" />
+                </motion.div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-green-700 via-emerald-600 to-green-800 bg-clip-text text-transparent">
+                  Report a New Issue
+                </h1>
+              </div>
+              <motion.p 
+                className="text-green-600/90 font-medium text-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+              >
+                Help improve your community by reporting infrastructure problems
+              </motion.p>
+            </motion.div>
+            
+            {/* Right Spacer */}
+            <div className="w-32"></div>
           </div>
         </div>
+        
+        {/* Bottom Accent Line */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-green-300/50 to-transparent"></div>
       </header>
 
       {/* Main Content */}
@@ -665,7 +958,11 @@ const ReportIssue = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="overflow-hidden border shadow-inner h-80 rounded-2xl border-green-200/80">
-                <MapComponent onLocationSelect={handleLocationSelect} initialCoords={formData.location.latitude && formData.location.longitude ? {lat: formData.location.latitude, lng: formData.location.longitude} : undefined} />
+                <MapComponent 
+                  onLocationSelect={handleLocationSelect} 
+                  initialLat={userLocation?.lat}
+                  initialLng={userLocation?.lng}
+                />
               </div>
 
               {locationLoading && <div className="p-3 text-sm text-blue-700 bg-blue-50 rounded-xl">Getting your location...</div>}
@@ -716,7 +1013,7 @@ const ReportIssue = () => {
                     }`}
                   >
                     {aiAnalyzing || locationLoading ? (
-                      <div className="flex flex-col items-center text-green-700"><RefreshCw className="w-8 h-8 animate-spin" /> <p className="mt-2 text-sm font-medium">{aiAnalyzing ? "AI Analyzing..." : "Processing GPS..."}</p> </div>
+                      <div className="flex flex-col items-center text-green-700"><RefreshCw className="w-8 h-8 animate-spin" /> <p className="mt-2 text-sm font-medium">{aiAnalyzing ? 'AI Analyzing...' : 'Processing GPS...'}</p> </div>
                     ) : (
                       <div className="text-center text-green-700/80">
                         <Camera className="w-6 h-6 mx-auto mb-2" />
@@ -746,6 +1043,116 @@ const ReportIssue = () => {
                     )}
                   </div>
                 )}
+                
+                {/* AI Severity Analysis Display */}
+                {severityAnalysis && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 mt-4 border rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200"
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div className="p-2 rounded-lg bg-amber-100">
+                        {severityAnalysis.level === 'Critical' && <AlertTriangle className="w-5 h-5 text-red-600" />}
+                        {severityAnalysis.level === 'High' && <Zap className="w-5 h-5 text-orange-600" />}
+                        {severityAnalysis.level === 'Medium' && <AlertTriangle className="w-5 h-5 text-yellow-600" />}
+                        {severityAnalysis.level === 'Low' && <CheckCircle className="w-5 h-5 text-green-600" />}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-amber-800">AI Severity Assessment</h4>
+                          <div className="flex items-center space-x-2">
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              severityAnalysis.level === 'Critical' ? 'bg-red-100 text-red-800' :
+                              severityAnalysis.level === 'High' ? 'bg-orange-100 text-orange-800' :
+                              severityAnalysis.level === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-green-100 text-green-800'
+                            }`}>
+                              {severityAnalysis.level}
+                            </span>
+                            <span className="text-sm font-bold text-amber-700">{severityAnalysis.score}/10</span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-amber-700">{severityAnalysis.reasoning}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+                {/* Voice Recording Section */}
+                <div className="space-y-3">
+                  <Label className="font-medium text-green-800">Voice Description (Optional)</Label>
+                  <div className="p-4 border rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <Languages className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm font-medium text-blue-800">Voice-to-Text with Auto-Translation</span>
+                      </div>
+                      {voiceRecording.detectedLanguage && (
+                        <span className="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full">
+                          {voiceRecording.detectedLanguage}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center space-x-3">
+                      {!voiceRecording.isRecording ? (
+                        <Button
+                          type="button"
+                          onClick={startVoiceRecording}
+                          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                          disabled={isTranslating}
+                        >
+                          <Mic className="w-4 h-4" />
+                          <span>Start Recording</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          onClick={stopVoiceRecording}
+                          className="flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg animate-pulse"
+                        >
+                          <MicOff className="w-4 h-4" />
+                          <span>Stop Recording</span>
+                        </Button>
+                      )}
+                      
+                      {voiceRecording.transcript && (
+                        <Button
+                          type="button"
+                          onClick={clearVoiceInput}
+                          variant="outline"
+                          size="sm"
+                          className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                        >
+                          <X className="w-3 h-3 mr-1" /> Clear
+                        </Button>
+                      )}
+                      
+                      {isTranslating && (
+                        <div className="flex items-center space-x-2 text-blue-600">
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span className="text-sm">Translating...</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {voiceRecording.transcript && (
+                      <div className="mt-3 p-3 bg-white/80 rounded-lg border border-blue-100">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Volume2 className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-800">Transcribed Text:</span>
+                        </div>
+                        <p className="text-sm text-gray-700">{voiceRecording.transcript}</p>
+                        {voiceRecording.detectedLanguage !== 'English' && voiceRecording.translatedText && (
+                          <div className="mt-2 pt-2 border-t border-blue-100">
+                            <span className="text-xs font-medium text-blue-600">Auto-added to description</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* Issue Title */}
                 <div className="space-y-2">
                   <Label htmlFor="title" className="font-medium text-green-800">Title *</Label>

@@ -9,23 +9,42 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getIssues = exports.createIssue = void 0;
+exports.hypeIssue = exports.getIssues = exports.createIssue = void 0;
 const issue_model_1 = require("../models/issue.model");
 const multimedia_model_1 = require("../models/multimedia.model");
 const createIssue = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        console.log("req.body:", req.body);
+        console.log("req.files:", req.files);
         const files = req.files || [];
-        const { title = "Untitled", description, location, issueType } = req.body;
+        const { title = "Untitled", description, location, issueType, language = "en" } = req.body;
         // location stuff
-        let parsedLocation = location;
+        // let parsedLocation = location;
+        // if (typeof location === "string") {
+        //   try {
+        //     parsedLocation = JSON.parse(location);
+        //   } catch {
+        //     res.status(400).json({ message: "Invalid location JSON format" });
+        //     return;
+        //   }
+        // }
+        let parsedLocation;
         if (typeof location === "string") {
             try {
                 parsedLocation = JSON.parse(location);
             }
-            catch (_a) {
+            catch (err) {
+                console.error("Failed to parse location:", location);
                 res.status(400).json({ message: "Invalid location JSON format" });
                 return;
             }
+        }
+        else if (typeof location === "object" && location !== null) {
+            parsedLocation = location;
+        }
+        else {
+            res.status(400).json({ message: "Location is missing or invalid" });
+            return;
         }
         if (!title ||
             !description ||
@@ -51,6 +70,7 @@ const createIssue = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             location: parsedLocation,
             status: "Reported",
             multimediaId: req.multimediaId,
+            language: language || "en",
         });
         const mediaDocs = yield Promise.all(files.map((file) => multimedia_model_1.MultimediaModel.create({
             issueID: issue._id,
@@ -72,12 +92,26 @@ const createIssue = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 exports.createIssue = createIssue;
 const getIssues = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const issues = yield issue_model_1.IssueModel.find({})
+        const { language } = req.query;
+        // Build filter object
+        const filter = {};
+        if (language && ["en", "hi", "kn"].includes(language)) {
+            filter.language = language;
+        }
+        const issues = yield issue_model_1.IssueModel.find(filter)
             .populate("citizenId", "fullName")
             .lean();
         const issuesWithMedia = yield Promise.all(issues.map((issue) => __awaiter(void 0, void 0, void 0, function* () {
             var _a;
             const media = yield multimedia_model_1.MultimediaModel.find({ issueID: issue._id });
+            // Build absolute URL if needed
+            const firstUrl = media.length > 0 ? media[0].url : null;
+            const base = `${req.protocol}://${req.get("host")}`;
+            const imageUrl = firstUrl
+                ? (firstUrl.startsWith("http://") || firstUrl.startsWith("https://")
+                    ? firstUrl
+                    : `${base}/${firstUrl.replace(/^\//, "")}`)
+                : null;
             return {
                 _id: issue._id,
                 title: issue.title,
@@ -86,8 +120,12 @@ const getIssues = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 location: issue.location, //  send only address
                 reportedBy: ((_a = issue.citizenId) === null || _a === void 0 ? void 0 : _a.fullName) || "Anonymous",
                 reportedAt: issue.createdAt,
-                image: media.length > 0 ? media[0].url : null,
+                image: imageUrl,
                 status: issue.status,
+                hypePoints: issue.hypePoints || 0,
+                userHasHyped: Array.isArray(issue.hypedBy)
+                    ? issue.hypedBy.some((id) => (id === null || id === void 0 ? void 0 : id.toString()) === req.citizenId)
+                    : false,
             };
         })));
         res.json({ issues: issuesWithMedia });
@@ -100,3 +138,39 @@ const getIssues = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.getIssues = getIssues;
+const hypeIssue = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        const citizenId = req.citizenId;
+        if (!citizenId) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
+        // Attempt atomic update: only hype if user hasn't hyped before
+        const updated = yield issue_model_1.IssueModel.findOneAndUpdate({ _id: id, hypedBy: { $ne: citizenId } }, { $addToSet: { hypedBy: citizenId }, $inc: { hypePoints: 1 } }, { new: true }).lean();
+        if (!updated) {
+            // Either issue not found or already hyped by this user
+            const existing = yield issue_model_1.IssueModel.findById(id).lean();
+            if (!existing) {
+                res.status(404).json({ message: "Issue not found" });
+                return;
+            }
+            res.status(200).json({
+                message: "Already hyped",
+                hypePoints: existing.hypePoints || 0,
+                userHasHyped: true,
+            });
+            return;
+        }
+        res.status(200).json({
+            message: "Hype added",
+            hypePoints: updated.hypePoints || 0,
+            userHasHyped: true,
+        });
+    }
+    catch (error) {
+        console.error("Error hyping issue:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.hypeIssue = hypeIssue;

@@ -37,7 +37,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 items-center gap-8 rounded-xl bg-white/70 backdrop-blur-md p-8 shadow-lg md:grid-cols-2 lg:p-12">
           <div>
             <h3 className="text-2xl font-bold text-slate-900">
-              Join the Movement
+Join the Movement
             </h3>
             <p className="mt-2 text-slate-600">
               Stay updated with the latest community reports, success stories,
@@ -54,7 +54,7 @@ const Footer = () => {
               type="submit"
               className="flex-shrink-0 rounded-lg bg-green-700 text-white shadow-lg shadow-green-700/20 transition-all duration-300 hover:bg-green-800 hover:shadow-green-700/40"
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-4 w-4" /> Subscribe
               <span className="ml-2 hidden sm:inline">Subscribe</span>
             </Button>
           </form>

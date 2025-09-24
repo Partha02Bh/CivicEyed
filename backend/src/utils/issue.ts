@@ -18,4 +18,9 @@ export interface IIssue {
   createdAt?: Date;
   updatedAt?: Date;
   handledBy?: Object | string; 
+  // Hype / upvote system
+  hypePoints?: number;
+  hypedBy?: Types.ObjectId[];
+  // Language support
+  language?: "en" | "hi" | "kn";
 }

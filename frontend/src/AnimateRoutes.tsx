@@ -4,12 +4,17 @@ import Index from "./pages/Index";
 import CitizenHome from "./pages/CitizenHome";
 import CitizenProfile from "./pages/CitizenProfile";
 import ReportIssue from "./pages/ReportIssue";
+import LiveMap from "./pages/LiveMap";
 import AdminHome from "./pages/AdminHome";
 import AdminProfile from "./pages/AdminProfile";
+import CreateAnnouncement from "./pages/CreateAnnouncement";
+import ManageAnnouncements from "./pages/ManageAnnouncements";
+import Announcements from "./pages/Announcements";
 import NotFound from "./pages/NotFound";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const pageTransition = {
   initial: { opacity: 0, y: 40 },
@@ -87,7 +92,19 @@ export default function AnimatedRoutes() {
           element={
             <ProtectedRoute requiredRole="citizen">
               <MotionWrapper>
-                <CitizenProfile />
+                <ErrorBoundary>
+                  <CitizenProfile />
+                </ErrorBoundary>
+              </MotionWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/citizen/live-map"
+          element={
+            <ProtectedRoute requiredRole="citizen">
+              <MotionWrapper>
+                <LiveMap />
               </MotionWrapper>
             </ProtectedRoute>
           }
@@ -107,7 +124,47 @@ export default function AnimatedRoutes() {
           element={
             <ProtectedRoute requiredRole="admin">
               <MotionWrapper>
-                <AdminProfile />
+                <ErrorBoundary>
+                  <AdminProfile />
+                </ErrorBoundary>
+              </MotionWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/create-announcement"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <MotionWrapper>
+                <CreateAnnouncement />
+              </MotionWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/manage-announcements"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <MotionWrapper>
+                <ManageAnnouncements />
+              </MotionWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/announcements"
+          element={
+            <MotionWrapper>
+              <Announcements />
+            </MotionWrapper>
+          }
+        />
+        <Route
+          path="/citizen/announcements"
+          element={
+            <ProtectedRoute requiredRole="citizen">
+              <MotionWrapper>
+                <Announcements />
               </MotionWrapper>
             </ProtectedRoute>
           }

@@ -54,6 +54,23 @@ const IssueSchema = new mongoose_1.Schema({
         type: mongoose_1.Schema.Types.ObjectId,
         ref: "Admin",
     },
+    hypePoints: {
+        type: Number,
+        default: 0,
+        min: 0,
+    },
+    hypedBy: [
+        {
+            type: mongoose_1.Schema.Types.ObjectId,
+            ref: "Citizen",
+        },
+    ],
+    language: {
+        type: String,
+        enum: ["en", "hi", "kn"],
+        default: "en",
+        required: true,
+    },
 }, { timestamps: true });
 exports.LocationModel = (0, mongoose_1.model)("Location", locationSchema);
 exports.IssueModel = (0, mongoose_1.model)("Issue", IssueSchema);

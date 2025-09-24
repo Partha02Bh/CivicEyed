@@ -69,9 +69,12 @@ const getIssuesByCitizen = (req, res) => __awaiter(void 0, void 0, void 0, funct
         }
         const issues = yield issue_model_1.IssueModel.find({ citizenId })
             .populate("citizenId", "fullName")
+            .populate("media")
             .sort({ createdAt: -1 })
             .lean();
-        res.json({ issues });
+        // Format issues to include file field for frontend compatibility
+        const formattedIssues = issues.map(issue => (Object.assign(Object.assign({}, issue), { file: issue.media ? issue.media.url : null })));
+        res.json({ issues: formattedIssues });
     }
     catch (error) {
         console.error("Error fetching issues:", error);

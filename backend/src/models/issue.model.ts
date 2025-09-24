@@ -59,6 +59,23 @@ const IssueSchema = new Schema<IIssue & Document>(
       type: Schema.Types.ObjectId,
       ref: "Admin",
     },
+    hypePoints: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    hypedBy: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Citizen",
+      },
+    ],
+    language: {
+      type: String,
+      enum: ["en", "hi", "kn"],
+      default: "en",
+      required: true,
+    },
   },
   { timestamps: true }
 );

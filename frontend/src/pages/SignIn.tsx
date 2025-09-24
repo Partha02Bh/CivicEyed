@@ -69,7 +69,7 @@ const SignIn = () => {
           description:
             activeTab === "citizen"
               ? "Welcome back!"
-              : "Welcome back, Administrator!",
+              : "Welcome to Admin Dashboard!",
         });
         navigate(activeTab === "citizen" ? "/citizen" : "/admin", {
           replace: true,
@@ -128,19 +128,9 @@ const SignIn = () => {
               value={activeTab}
               onValueChange={(val) => setActiveTab(val as any)}
             >
-              <TabsList className="grid w-full grid-cols-2 rounded-full bg-gray-100 p-1">
-                <TabsTrigger
-                  value="citizen"
-                  className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#016dd0] data-[state=active]:to-[#159e52] data-[state=active]:text-white"
-                >
-                  Citizen
-                </TabsTrigger>
-                <TabsTrigger
-                  value="admin"
-                  className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#016dd0] data-[state=active]:to-[#159e52] data-[state=active]:text-white"
-                >
-                  Administrator
-                </TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="citizen">Citizen</TabsTrigger>
+                <TabsTrigger value="admin">Administrator</TabsTrigger>
               </TabsList>
 
               <AnimatePresence mode="wait">
@@ -174,7 +164,7 @@ const SignIn = () => {
                           <Label htmlFor="citizen-password">Password</Label>
                           <div className="relative">
                             <Input
-                              id="citizen-password"
+                              placeholder="Enter your password"
                               type={showPassword ? "text" : "password"}
                               value={citizenForm.password}
                               onChange={(e) =>
@@ -204,7 +194,7 @@ const SignIn = () => {
                           type="submit"
                           className="w-full bg-gradient-to-r from-[#016dd0] to-[#159e52] text-white hover:opacity-70"
                         >
-                          Sign In as Citizen
+                          Sign In
                         </Button>
                       </form>
                     </motion.div>
@@ -241,7 +231,7 @@ const SignIn = () => {
                           <Label htmlFor="admin-password">Password</Label>
                           <div className="relative">
                             <Input
-                              id="admin-password"
+                              placeholder="Enter your password"
                               type={showPassword ? "text" : "password"}
                               value={adminForm.password}
                               onChange={(e) =>
@@ -268,9 +258,9 @@ const SignIn = () => {
                           </div>
                         </div>
                         <div>
-                          <Label htmlFor="admin-code">Admin Code</Label>
+                          <Label htmlFor="admin-access-code">Admin Access Code</Label>
                           <Input
-                            id="admin-code"
+                            id="admin-access-code"
                             value={adminForm.adminAccessCode}
                             onChange={(e) =>
                               setAdminForm({
@@ -285,7 +275,7 @@ const SignIn = () => {
                           type="submit"
                           className="w-full bg-gradient-to-r from-[#016dd0] to-[#159e52] text-white hover:opacity-70"
                         >
-                          Sign In as Administrator
+                          Sign In
                         </Button>
                       </form>
                     </motion.div>
@@ -295,8 +285,11 @@ const SignIn = () => {
 
               <div className="mt-6 text-center">
                 <p className="text-sm text-muted-foreground">
-                  Don{"'"}t have an account?{" "}
-                  <Link to="/signup" className="text-primary hover:underline">
+                  Don't have an account?{" "}
+                  <Link
+                    to="/signup"
+                    className="text-blue-600 hover:text-blue-800 font-medium"
+                  >
                     Sign up here
                   </Link>
                 </p>
