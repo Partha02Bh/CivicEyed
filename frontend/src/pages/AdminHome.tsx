@@ -24,10 +24,7 @@ import {
   MapPin,
   TrendingUp,
   Route,
-  ArrowRight,
-  Calendar,
   Zap,
-  Settings,
   BarChart3,
   AlertTriangle,
 } from "lucide-react";
@@ -115,10 +112,6 @@ const AdminHome = () => {
   const departments = [
     "Public Works", "Sanitation", "Transportation", "Utilities",
     "Health & Safety", "Parks & Recreation", "IT Services", "Emergency Services",
-  ];
-  const issueTypes = [
-    "Road Infrastructure", "Waste Management", "Environmental Issues", "Utilities & Infrastructure",
-    "Public Safety", "Other",
   ];
   const priorities = ["Low", "Medium", "High", "Critical"];
 

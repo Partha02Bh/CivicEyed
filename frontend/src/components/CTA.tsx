@@ -3,9 +3,18 @@ import { ArrowRight, Shield, Users } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "./ui/button"; // Assuming you still use this
 import { handleSupportClick } from "./SupportModel"; // Assuming this is defined
+import type { Variants } from "framer-motion";
+import type { LucideIcon } from "lucide-react";
 
+interface ChoiceCardProps {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  linkTo: string;
+  actionText: string;
+}
 // --- Animation Variants for a polished entrance ---
-const containerVariants = {
+const variants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -15,7 +24,7 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" as const } },
 };
 
 const CTA = () => {
@@ -24,7 +33,7 @@ const CTA = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           className="grid items-center gap-16 lg:grid-cols-2"
-          variants={containerVariants}
+          variants={variants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.3 }}
@@ -83,7 +92,7 @@ const CTA = () => {
 };
 
 // --- A dedicated sub-component for the interactive choice cards ---
-const ChoiceCard = ({ icon: Icon, title, description, linkTo, actionText }) => {
+const ChoiceCard: React.FC<ChoiceCardProps> = ({ icon: Icon, title, description, linkTo, }) => {
   return (
     <Link to={linkTo}>
       <motion.div

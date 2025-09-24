@@ -63,7 +63,6 @@ const LOCATION_RADIUS = 1; // km radius to consider as same area
 const CitizenHome = () => {
   const [reportedIssues, setReportedIssues] = useState<Issues[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [searchCity, setSearchCity] = useState("");
   const [selectedIssue, setSelectedIssue] = useState<Issues | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);

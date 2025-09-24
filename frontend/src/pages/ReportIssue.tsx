@@ -343,7 +343,6 @@ const ReportIssue = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recognitionRef = useRef<any>(null);
   
   const [formData, setFormData] = useState<FormDataState>({
@@ -647,7 +646,6 @@ const ReportIssue = () => {
   // Voice Recording Functions
   const startVoiceRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
       // Initialize Speech Recognition if available
       if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {

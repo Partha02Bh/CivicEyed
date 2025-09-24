@@ -105,7 +105,6 @@ import {
 } from "lucide-react";
 import HeaderAfterAuth from "../components/HeaderAfterAuth";
 import { useAuth } from "../contexts/AuthContext";
-import { useLanguage } from "../contexts/LanguageContext";
 import { toast } from "sonner";
 import { VITE_BACKEND_URL } from "../config/config";
 
@@ -128,15 +127,7 @@ type ViewMode = 'grid' | 'list';
 type FilterStatus = 'all' | 'Pending' | 'In Progress' | 'Resolved' | 'Rejected';
 
 const CitizenProfile = () => {
-  // Safely use language context with fallback
-  let t: (key: string) => string;
-  try {
-    const languageContext = useLanguage();
-    t = languageContext.t;
-  } catch (error) {
-    console.warn('Language context not available, using fallback');
-    t = (key: string) => key; // Fallback function that returns the key itself
-  }
+  // Removed unused translation function 't'
 
   const { user, updateUserProfile, token, isLoading } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
@@ -393,7 +384,7 @@ const CitizenProfile = () => {
     window.open(imageUrl, '_blank');
   };
 
-  const renderIssueCard = (issue: Issues, index: number) => {
+  const renderIssueCard = (issue: Issues) => {
     if (viewMode === 'grid') {
       return (
         <Card key={issue._id} className="group bg-white border-0 shadow-lg hover:shadow-2xl rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-2 backdrop-blur-sm">
@@ -1041,7 +1032,7 @@ const CitizenProfile = () => {
                         className="animate-scale-in" 
                         style={{ animationDelay: `${0.1 + (index * 0.1)}s` }}
                       >
-                        {renderIssueCard(issue, index)}
+                        {renderIssueCard(issue)}
                       </div>
                     ))}
                   </div>
@@ -1053,7 +1044,7 @@ const CitizenProfile = () => {
                         className="animate-slide-in-left" 
                         style={{ animationDelay: `${0.1 + (index * 0.1)}s` }}
                       >
-                        {renderIssueCard(issue, index)}
+                        {renderIssueCard(issue)}
                       </div>
                     ))}
                   </div>

@@ -1,4 +1,4 @@
-import { MapPin, Mail, Phone, Github, Linkedin, X, Send } from "lucide-react";
+import { Mail, Phone, Github, Linkedin, X, Send } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input"; // Assuming you have an Input component from shadcn/ui
 import civicIssueLogo from "../assets/civic-issue.png";
@@ -7,7 +7,13 @@ import { motion } from "framer-motion";
 import { handleSupportClick } from "./SupportModel";
 
 // A reusable, animated link component for the footer, styled for a light theme
-const FooterLink = ({ href, children, isInternal = false }) => {
+interface FooterLinkProps {
+  href: string;
+  children: React.ReactNode;
+  isInternal?: boolean;
+}
+
+const FooterLink: React.FC<FooterLinkProps> = ({ href, children, isInternal = false }) => {
   const linkContent = (
     <span className="inline-block text-slate-600 transition-all duration-300 group-hover:text-green-700 group-hover:translate-x-1">
       {children}

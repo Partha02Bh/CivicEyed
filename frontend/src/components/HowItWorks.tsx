@@ -1,14 +1,6 @@
 import { Camera, MapPin, Send, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
 
-const fadeInUp = {
-  hidden: { opacity: 0, y: 50 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.1, duration: 0.6, ease: "easeOut" },
-  }),
-};
 
 const HowItWorks = () => {
   const steps = [
@@ -71,34 +63,35 @@ const HowItWorks = () => {
 
           <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
             {steps.map((step, index) => (
-              <motion.div
+                <motion.div
                 key={step.title}
-                variants={fadeInUp}
+                variants={{
+                  hidden: { opacity: 0, y: 50 },
+                  visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { delay: index * 0.1, duration: 0.6, ease: [0.42, 0, 0.58, 1] },
+                  },
+                }}
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.3 }}
-                custom={index}
-              >
-                {/* THIS IS THE CORRECTED LINE */}
+                >
                 <div className="relative group h-full flex flex-col rounded-xl border border-slate-200 bg-white p-8 text-center shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-green-100">
-                  {/* Step Number Badge */}
                   <div className="absolute -right-3 -top-3 flex h-10 w-10 items-center justify-center rounded-full bg-green-600 text-lg font-bold text-white shadow-md transition-all duration-300 group-hover:scale-110">
-                    {index + 1}
+                  {index + 1}
                   </div>
-
-                  {/* Icon Container */}
                   <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-50 text-green-700 shadow-inner transition-all duration-300 group-hover:scale-105 group-hover:bg-green-100">
-                    <step.icon className="h-8 w-8" />
+                  <step.icon className="h-8 w-8" />
                   </div>
-
                   <h3 className="mb-3 text-xl font-bold text-slate-900">
-                    {step.title}
+                  {step.title}
                   </h3>
                   <p className="text-base text-slate-600 leading-relaxed">
-                    {step.description}
+                  {step.description}
                   </p>
                 </div>
-              </motion.div>
+                </motion.div>
             ))}
           </div>
         </div>

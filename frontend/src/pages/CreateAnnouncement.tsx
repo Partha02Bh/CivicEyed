@@ -11,8 +11,7 @@ import {
   MapPin, 
   Calendar, 
   AlertTriangle, 
-  Save, 
-  ArrowLeft,
+  Save,
   Clock,
   Hash
 } from 'lucide-react';
