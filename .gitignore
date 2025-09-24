@@ -14,6 +14,7 @@ backend/node_modules/
 # Environment variables
 frontend/.env
 frontend/.env.local
+frontend/.env.production
 frontend/.env.*.local
 backend/.env
 backend/.env.local

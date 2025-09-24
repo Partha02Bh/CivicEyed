@@ -74,7 +74,7 @@ const CitizenHome = () => {
   useEffect(() => {
     const fetchIssues = async () => {
       try {
-        const response = await fetch(`${VITE_BACKEND_URL}/api/v1/issues`);
+        const response = await fetch(`${VITE_BACKEND_URL}/api/v1/all-issues`);
         const data = await response.json();
         if (data.success) {
           const issues = data.data || [];
@@ -126,7 +126,7 @@ const CitizenHome = () => {
           try {
             // Reverse geocode to get address
             const response = await fetch(
-              `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=YOUR_OPENCAGE_API_KEY`
+              `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${import.meta.env.VITE_OPENCAGE_API_KEY}`
             );
             const data = await response.json();
             const address = data.results?.[0]?.formatted || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
